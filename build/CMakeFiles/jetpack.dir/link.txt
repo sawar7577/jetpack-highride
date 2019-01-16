@@ -1,1 +1,0 @@
-/usr/bin/c++      CMakeFiles/jetpack.dir/src/main.cpp.o  -o jetpack -rdynamic -lglfw -lGLEW -lGLU -lGL -lGL 

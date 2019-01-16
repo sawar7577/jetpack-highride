@@ -14,9 +14,6 @@ GLFWwindow *window;
 
 Ball ball1, ball2;
 Player playa;
-Floor level;
-Magnet mag;
-
 // int flag;
 
 float screen_zoom = 1, screen_center_x = 0, screen_center_y = 0;
@@ -26,10 +23,7 @@ Timer t60(1.0 / 60);
 
 /* Render the scene with openGL */
 /* Edit this function according to your assignment */
-// glm::vec3 eye ( 0, 0, 1 );
-// glm::vec3 target (0, 0, 0);
-
-void draw(GLFWwindow *window) {
+void draw() {
     // clear the color and depth in the frame buffer
     glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -39,23 +33,10 @@ void draw(GLFWwindow *window) {
 
     // Eye - Location of camera. Don't change unless you are sure!!
     // glm::vec3 eye ( 5*cos(camera_rotation_angle*M_PI/180.0f), 0, 5*sin(camera_rotation_angle*M_PI/180.0f) );
-    glm::vec3 eye (screen_center_x, 0, 1 );
+    glm::vec3 eye ( 0, 0, 1 );
     
     // Target - Where is the camera looking at.  Don't change unless you are sure!!
-    glm::vec3 target (screen_center_x, 0, 0);
-    // if(glfwGetKey(window, GLFW_KEY_RIGHT)){
-    //     // target.x += 0.2f;
-    //     // target.x = playa.position.x;
-    //     // screen_center_x += 0.2f;
-    //     eye.x = target.x;
-    // }
-    // if(glfwGetKey(window, GLFW_KEY_LEFT)){
-    //     target.x -= 0.2f;
-    //     // target.x = playa.position.x;
-
-        // screen_center_x -= 0.2f;
-    //     eye.x = target.x;
-    // }
+    glm::vec3 target (0, 0, 0);
     // Up - Up vector defines tilt of camera.  Don't change unless you are sure!!
     glm::vec3 up (0, 1, 0);
 
@@ -77,8 +58,6 @@ void draw(GLFWwindow *window) {
     ball1.draw(VP);
     ball2.draw(VP);
     playa.draw(VP);
-    mag.draw(VP);
-    level.draw(VP, target.x);
 }
 
 void tick_input(GLFWwindow *window) {
@@ -89,12 +68,9 @@ void tick_input(GLFWwindow *window) {
     }
 }
 
-void tick_elements(GLFWwindow *window) {
+void tick_elements() {
     ball1.tick();
     ball2.tick();
-    mag.tick(playa);
-
-    playa.tick(window);
     // camera_rotation_angle += 1;
 }
 
@@ -107,12 +83,9 @@ void initGL(GLFWwindow *window, int width, int height) {
     ball1       = Ball(2.0f, 0, COLOR_RED);
     ball2       = Ball(-2.0f, 0, COLOR_GREEN);
     ball2.speed = -1;
-    playa       = Player(screen_center_x, screen_center_y, 2.0f, COLOR_BLACK);
-    level       = Floor(-10.0f, -4.0f);
-    mag         = Magnet(2.0f, 2.0f, COLOR_BLACK);
+
     // Create and compile our GLSL program from the shaders
-    
-    programID = LoadShaders("Sample_GL.vert", "Sample_GL.frag");;
+    programID = LoadShaders("Sample_GL.vert", "Sample_GL.frag");
     // Get a handle for our "MVP" uniform
     Matrices.MatrixID = glGetUniformLocation(programID, "MVP");
 
@@ -135,8 +108,8 @@ void initGL(GLFWwindow *window, int width, int height) {
 
 int main(int argc, char **argv) {
     srand(time(0));
-    int width  = 1280;
-    int height = 720;
+    int width  = 600;
+    int height = 600;
     // flag = 1;
     window = initGLFW(width, height);
 
@@ -146,15 +119,36 @@ int main(int argc, char **argv) {
     int loop = 1;
     while (!glfwWindowShouldClose(window)) {
         // Process timers
-        
+        bounding_box_t b1,b2;
+        b1.x = ball1.position.x;
+        b1.y = ball1.position.y;
+        b1.width = 2.0f;
+        b1.height = 2.0f;
+
+        b2.x = ball2.position.x;
+        b2.y = ball2.position.y;
+        b2.width = 2.0f;
+        b2.height = 2.0f;
+
+        if(loop && detect_collision(b1,b2))
+        {
+            // flag = 0;
+            loop = 0;
+            ball2.speed *= -1;
+            // quit(window);
+        }
+        if(ball1.position.y < -5.0f)
+        {
+            break;
+        }
         if (t60.processTick()) {
             // 60 fps
             // OpenGL Draw commands
-            draw(window);
+            draw();
             // Swap Frame Buffer in double buffering
             glfwSwapBuffers(window);
 
-            tick_elements(window);
+            tick_elements();
             tick_input(window);
         }
 
@@ -175,6 +169,5 @@ void reset_screen() {
     float bottom = screen_center_y - 4 / screen_zoom;
     float left   = screen_center_x - 4 / screen_zoom;
     float right  = screen_center_x + 4 / screen_zoom;
-    float apratio = 1280.0/720.0; 
-    Matrices.projection = glm::ortho(left*apratio, right*apratio, bottom, top, 0.1f, 500.0f);
+    Matrices.projection = glm::ortho(left, right, bottom, top, 0.1f, 500.0f);
 }

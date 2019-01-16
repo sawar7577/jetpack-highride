@@ -49,10 +49,10 @@ Ball::Ball(float x, float y, color_t color) {
 void Ball::draw(glm::mat4 VP) {
     Matrices.model = glm::mat4(1.0f);
     glm::mat4 translate = glm::translate (this->position);    // glTranslatef
-    // glm::mat4 rotate    = glm::rotate((float) (this->rotation * M_PI / 180.0f), glm::vec3(0, 1, 0));
+    glm::mat4 rotate    = glm::rotate((float) (this->rotation * M_PI / 180.0f), glm::vec3(1, 0, 0));
     // No need as coords centered at 0, 0, 0 of cube arouund which we waant to rotate
     // rotate          = rotate * glm::translate(glm::vec3(0, -0.6, 0));
-    Matrices.model *= (translate);
+    Matrices.model *= (translate * rotate);
     glm::mat4 MVP = VP * Matrices.model * glm::translate(glm::vec3(1,0,0));
     glUniformMatrix4fv(Matrices.MatrixID, 1, GL_FALSE, &MVP[0][0]);
     draw3DObject(this->object);
@@ -75,7 +75,7 @@ Player::Player(float x, float y, float mass, color_t color) {
     GLfloat vertex_buffer_data[9*n]; 
 	
 	double angle = (double)(2*M_PI)/(double)(n);
-	double arr[3] = {0.0 , 1.5, 0.0};
+	double arr[3] = {0.0 , 1.0, 0.0};
 	double temp[3];
 	double zero[3] = {0.0, 0.0, 0.0};
 	for(int i = 0, j = 0; i < 3*n; ++i)
@@ -142,10 +142,10 @@ void Player::tick(GLFWwindow *window) {
     this->momentum.x += (this->momentum.x*(-0.1f));
         
     if(glfwGetKey(window,GLFW_KEY_LEFT)){
-        this->momentum.x -= 0.1f;
+        this->momentum.x -= 0.05f;
     }
     if(glfwGetKey(window,GLFW_KEY_RIGHT)){
-        this->momentum.x += 0.1f;
+        this->momentum.x += 0.05f;
     }
     if(glfwGetKey(window,GLFW_KEY_UP)){
         this->momentum.y += 0.09f;
@@ -156,128 +156,12 @@ void Player::tick(GLFWwindow *window) {
     // std::cout << this->momentum.x << std::endl;
     this->position += this->momentum / this->mass;
 
-	if(this->position.y <= bottom){
-		this->momentum.y = 0.0f;
-		this->position.y = bottom;
-	}
-    if(this->position.y >= top){
-		this->momentum.y = 0.0f;
-		this->position.y = top;
-	}
+
+    this->position.y < bottom ? this->momentum.y = 0.0f : this->momentum.y = this->momentum.y ;    
+    this->position.y < bottom ? this->position.y = bottom : this->position.y = this->position.y ;
     
-	screen_center_x = this->position.x;
-	// if(this->position.x <= left){
-	// 	this->momentum.x = 0.0f;
-	// 	this->position.x = left;
-	// }
-    // if(this->position.x >= right){
-	// 	this->momentum.x = 0.0f;
-	// 	this->position.x = right;
-	// }
-    // std::cout << "---" << this->position.x << std::endl;
-
-	
+    this->position.y > top ? this->momentum.y = 0.0f : this->momentum.y = this->momentum.y ;        
+    this->position.y > top ? this->position.y = top : this->position.y = this->position.y ;
 
 }
 
-Rectangle::Rectangle(float x, float y, float width, float height, color_t color) {
-	this->position = glm::vec3(x,y,0);
-	static const GLfloat vertex_buffer_data [] = {
-		0.0f, 0.0f, 0.0f,
-		0.0f, 0.0f + height, 0.0f,
-		0.0f + width, 0.0f + height, 0.0f,
-		0.0f, 0.0f, 0.0f,
-		0.0f + width, 0.0f, 0.0f,
-		0.0f + width, 0.0f + height, 0.0f,
-	};
-	this->object = create3DObject(GL_TRIANGLES, 2*3, vertex_buffer_data, color, GL_FILL);
-}
-
-void Rectangle::draw(glm::mat4 VP) {
-    Matrices.model = glm::mat4(1.0f);
-    glm::mat4 translate = glm::translate (this->position);    // glTranslatef
-    // glm::mat4 rotate    = glm::rotate((float) (this->rotation * M_PI / 180.0f), glm::vec3(1, 0, 0));
-    // No need as coords centered at 0, 0, 0 of cube arouund which we waant to rotate
-    // rotate          = rotate * glm::translate(glm::vec3(0, -0.6, 0));
-    Matrices.model *= (translate);
-    glm::mat4 MVP = VP * Matrices.model;
-    glUniformMatrix4fv(Matrices.MatrixID, 1, GL_FALSE, &MVP[0][0]);
-    draw3DObject(this->object);
-}
-
-Floor::Floor(float x, float y){
-	map = 0;
-	Rectangle t;
-	
-	for(int i = 0 ; i < 20 ; ++i){
-		if(i%2 == 0) {
-			t = Rectangle(x, y, 1.0f, 1.0f, COLOR_RED);
-		}
-		else {
-			t = Rectangle(x, y, 1.0f, 1.0f, COLOR_GREEN);
-		}
-		t.position.x += i*(1.0f);
-		// std::cout << t.position.x << std::endl;
-
-		tiles.push_back(t);
-	}
-}
-
-void Floor::draw(glm::mat4 VP, float x) {
-	// std::cout << tiles[map].position.x << std::endl;
-
-	if(tiles[map].position.x - x < -8.0f){
-		tiles[map].position.x = tiles[ (map+19)%20 ].position.x+1.0f;
-		map++; 
-		// std::cout << "here" << std::endl;
-	}
-	else{
-		tiles[(map+19)%20].position.x = tiles[ map ].position.x-1.0f;	
-		map--;
-		// std::cout << "here" << std::endl;
-	}
-	map = (map+20)%20;
-	for(int i = 0 ; i < 20 ; ++i){
-		tiles[i].draw(VP);
-	}
-}
-
-Magnet::Magnet(float x, float y, color_t color){
-	this->position = glm::vec3(x, y, 0);
-	this->force = 1.0f;
-	float height = 1.0f;
-	float width  = 1.0f;
-	static const GLfloat vertex_buffer_data [] = {
-		0.0f, 0.0f, 0.0f,
-		0.0f, 0.0f + height, 0.0f,
-		0.0f + width, 0.0f + height, 0.0f,
-		0.0f, 0.0f, 0.0f,
-		0.0f + width, 0.0f, 0.0f,
-		0.0f + width, 0.0f + height, 0.0f,
-	};
-	this->object = create3DObject(GL_TRIANGLES, 2*3, vertex_buffer_data, color, GL_FILL);	
-}
-
-void Magnet::draw(glm::mat4 VP) {
-    Matrices.model = glm::mat4(1.0f);
-    glm::mat4 translate = glm::translate (this->position);    // glTranslatef
-    // glm::mat4 rotate    = glm::rotate((float) (this->rotation * M_PI / 180.0f), glm::vec3(1, 0, 0));
-    // No need as coords centered at 0, 0, 0 of cube arouund which we waant to rotate
-    // rotate          = rotate * glm::translate(glm::vec3(0, -0.6, 0));
-    Matrices.model *= (translate);
-    glm::mat4 MVP = VP * Matrices.model;
-    glUniformMatrix4fv(Matrices.MatrixID, 1, GL_FALSE, &MVP[0][0]);
-    draw3DObject(this->object);
-}
-
-void Magnet::tick(Player &player) {
-	glm::vec3 dist = this->position - player.position;
-	if(dist.x*dist.x + dist.y*dist.y >= 2.0f){
-	float ef = (this->force/player.mass)/(dist.x*dist.x+dist.y*dist.y);
-	glm::vec3 ch(ef*dist.x/sqrt(dist.x*dist.x+dist.y*dist.y),ef*dist.y/sqrt((dist.x*dist.x+dist.y*dist.y)),0);
-	player.momentum.x += ch.x;
-	player.momentum.y += ch.y;
-	std::cout << ch.x << " " << ch.y << std::endl;
-
-	}
-}
