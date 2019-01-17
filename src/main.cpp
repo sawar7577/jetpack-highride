@@ -16,6 +16,7 @@ Ball ball1, ball2;
 Player playa;
 Floor level;
 Magnet mag;
+Fireline fr;
 
 // int flag;
 
@@ -39,7 +40,7 @@ void draw(GLFWwindow *window) {
 
     // Eye - Location of camera. Don't change unless you are sure!!
     // glm::vec3 eye ( 5*cos(camera_rotation_angle*M_PI/180.0f), 0, 5*sin(camera_rotation_angle*M_PI/180.0f) );
-    glm::vec3 eye (screen_center_x, 0, 1 );
+    glm::vec3 eye (screen_center_x, 0, 2 );
     
     // Target - Where is the camera looking at.  Don't change unless you are sure!!
     glm::vec3 target (screen_center_x, 0, 0);
@@ -78,7 +79,11 @@ void draw(GLFWwindow *window) {
     ball2.draw(VP);
     playa.draw(VP);
     mag.draw(VP);
+    // fr.r1.draw(VP);
+    // fr.r2.draw(VP);
+    fr.draw(VP);
     level.draw(VP, target.x);
+
 }
 
 void tick_input(GLFWwindow *window) {
@@ -108,8 +113,10 @@ void initGL(GLFWwindow *window, int width, int height) {
     ball2       = Ball(-2.0f, 0, COLOR_GREEN);
     ball2.speed = -1;
     playa       = Player(screen_center_x, screen_center_y, 2.0f, COLOR_BLACK);
-    level       = Floor(-10.0f, -4.0f);
     mag         = Magnet(2.0f, 2.0f, COLOR_BLACK);
+    fr          = Fireline(4.0f,2.0f,2.0f,M_PI/3,COLOR_GREEN);
+    level       = Floor(-10.0f, -4.0f);
+
     // Create and compile our GLSL program from the shaders
     
     programID = LoadShaders("Sample_GL.vert", "Sample_GL.frag");;

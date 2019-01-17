@@ -49,10 +49,10 @@ Ball::Ball(float x, float y, color_t color) {
 void Ball::draw(glm::mat4 VP) {
     Matrices.model = glm::mat4(1.0f);
     glm::mat4 translate = glm::translate (this->position);    // glTranslatef
-    // glm::mat4 rotate    = glm::rotate((float) (this->rotation * M_PI / 180.0f), glm::vec3(0, 1, 0));
+    glm::mat4 rotate    = glm::rotate((float) (this->rotation * M_PI / 180.0f), glm::vec3(0, 1, 0));
     // No need as coords centered at 0, 0, 0 of cube arouund which we waant to rotate
     // rotate          = rotate * glm::translate(glm::vec3(0, -0.6, 0));
-    Matrices.model *= (translate);
+    Matrices.model *= (translate * rotate);
     glm::mat4 MVP = VP * Matrices.model * glm::translate(glm::vec3(1,0,0));
     glUniformMatrix4fv(Matrices.MatrixID, 1, GL_FALSE, &MVP[0][0]);
     draw3DObject(this->object);
@@ -139,13 +139,13 @@ void Player::tick(GLFWwindow *window) {
     float right  = screen_center_x + 4 / screen_zoom;
 
     this->momentum.y -= 0.04f;
-    this->momentum.x += (this->momentum.x*(-0.1f));
+    this->momentum.x += (this->momentum.x*(-0.08f));
         
     if(glfwGetKey(window,GLFW_KEY_LEFT)){
-        this->momentum.x -= 0.1f;
+        this->momentum.x -= 0.09f;
     }
     if(glfwGetKey(window,GLFW_KEY_RIGHT)){
-        this->momentum.x += 0.1f;
+        this->momentum.x += 0.09f;
     }
     if(glfwGetKey(window,GLFW_KEY_UP)){
         this->momentum.y += 0.09f;
@@ -166,40 +166,43 @@ void Player::tick(GLFWwindow *window) {
 	}
     
 	screen_center_x = this->position.x;
-	// if(this->position.x <= left){
-	// 	this->momentum.x = 0.0f;
-	// 	this->position.x = left;
-	// }
-    // if(this->position.x >= right){
-	// 	this->momentum.x = 0.0f;
-	// 	this->position.x = right;
-	// }
-    // std::cout << "---" << this->position.x << std::endl;
-
-	
-
 }
 
-Rectangle::Rectangle(float x, float y, float width, float height, color_t color) {
+Rectangle::Rectangle(float x, float y, float w, float h, float rot, color_t color) {
 	this->position = glm::vec3(x,y,0);
-	static const GLfloat vertex_buffer_data [] = {
-		0.0f, 0.0f, 0.0f,
-		0.0f, 0.0f + height, 0.0f,
-		0.0f + width, 0.0f + height, 0.0f,
-		0.0f, 0.0f, 0.0f,
-		0.0f + width, 0.0f, 0.0f,
-		0.0f + width, 0.0f + height, 0.0f,
+    this->rotation = rot;
+	std::cout << this->rotation << std::endl;
+
+	// static const GLfloat vertex_buffer_data [] = {
+	// 	0.0f, 0.0f, 0.0f,
+	// 	0.0f, 0.0f + height, 0.0f,
+	// 	0.0f + width, 0.0f + height, 0.0f,
+	// 	0.0f, 0.0f, 0.0f,
+	// 	0.0f + width, 0.0f, 0.0f,
+	// 	0.0f + width, 0.0f + height, 0.0f,
+	// };
+	float width = w;
+	float height = h;
+	GLfloat vertex_buffer_data [] = {
+		0.0f - width/2.0f, 0.0f - height/2.0f, 0.0f,
+		0.0f - width/2.0f, 0.0f + height/2.0f, 0.0f,
+		0.0f + width/2.0f, 0.0f + height/2.0f, 0.0f,
+		0.0f - width/2.0f, 0.0f - height/2.0f, 0.0f,
+		0.0f + width/2.0f, 0.0f - height/2.0f, 0.0f,
+		0.0f + width/2.0f, 0.0f + height/2.0f, 0.0f,
 	};
+	// std::cout << vertex_buffer_data[0] << " " << vertex_buffer_data[1] << std::endl;
 	this->object = create3DObject(GL_TRIANGLES, 2*3, vertex_buffer_data, color, GL_FILL);
 }
 
 void Rectangle::draw(glm::mat4 VP) {
     Matrices.model = glm::mat4(1.0f);
     glm::mat4 translate = glm::translate (this->position);    // glTranslatef
-    // glm::mat4 rotate    = glm::rotate((float) (this->rotation * M_PI / 180.0f), glm::vec3(1, 0, 0));
-    // No need as coords centered at 0, 0, 0 of cube arouund which we waant to rotate
+	// this->rotation = 0;
+    glm::mat4 rotate    = glm::rotate((float) (this->rotation), glm::vec3(0, 0, 1));
+	// No need as coords centered at 0, 0, 0 of cube arouund which we waant to rotate
     // rotate          = rotate * glm::translate(glm::vec3(0, -0.6, 0));
-    Matrices.model *= (translate);
+    Matrices.model *= (translate * rotate);
     glm::mat4 MVP = VP * Matrices.model;
     glUniformMatrix4fv(Matrices.MatrixID, 1, GL_FALSE, &MVP[0][0]);
     draw3DObject(this->object);
@@ -211,10 +214,10 @@ Floor::Floor(float x, float y){
 	
 	for(int i = 0 ; i < 20 ; ++i){
 		if(i%2 == 0) {
-			t = Rectangle(x, y, 1.0f, 1.0f, COLOR_RED);
+			t = Rectangle(x, y, 1.0f, 1.0f, 0, COLOR_RED);
 		}
 		else {
-			t = Rectangle(x, y, 1.0f, 1.0f, COLOR_GREEN);
+			t = Rectangle(x, y, 1.0f, 1.0f, 0, COLOR_GREEN);
 		}
 		t.position.x += i*(1.0f);
 		// std::cout << t.position.x << std::endl;
@@ -247,13 +250,21 @@ Magnet::Magnet(float x, float y, color_t color){
 	this->force = 1.0f;
 	float height = 1.0f;
 	float width  = 1.0f;
+	// static const GLfloat vertex_buffer_data [] = {
+	// 	0.0f, 0.0f, 0.0f,
+	// 	0.0f, 0.0f + height, 0.0f,
+	// 	0.0f + width, 0.0f + height, 0.0f,
+	// 	0.0f, 0.0f, 0.0f,
+	// 	0.0f + width, 0.0f, 0.0f,
+	// 	0.0f + width, 0.0f + height, 0.0f,
+	// };
 	static const GLfloat vertex_buffer_data [] = {
-		0.0f, 0.0f, 0.0f,
-		0.0f, 0.0f + height, 0.0f,
-		0.0f + width, 0.0f + height, 0.0f,
-		0.0f, 0.0f, 0.0f,
-		0.0f + width, 0.0f, 0.0f,
-		0.0f + width, 0.0f + height, 0.0f,
+		0.0f - width/2, 0.0f - height/2, 0.0f,
+		0.0f - width/2, 0.0f + height/2, 0.0f,
+		0.0f + width/2, 0.0f + height/2, 0.0f,
+		0.0f - width/2, 0.0f - height/2, 0.0f,
+		0.0f + width/2, 0.0f - height/2, 0.0f,
+		0.0f + width/2, 0.0f + height/2, 0.0f,
 	};
 	this->object = create3DObject(GL_TRIANGLES, 2*3, vertex_buffer_data, color, GL_FILL);	
 }
@@ -277,7 +288,40 @@ void Magnet::tick(Player &player) {
 	glm::vec3 ch(ef*dist.x/sqrt(dist.x*dist.x+dist.y*dist.y),ef*dist.y/sqrt((dist.x*dist.x+dist.y*dist.y)),0);
 	player.momentum.x += ch.x;
 	player.momentum.y += ch.y;
-	std::cout << ch.x << " " << ch.y << std::endl;
-
+	// std::cout << ch.x << " " << ch.y << std::endl;
 	}
+}
+
+Fireline::Fireline(float x, float y, float length, float rot, color_t color) {
+	this->position = glm::vec3(x, y, 0);
+	// this->rotation = rot;
+	// std::cout << length << " length" << std::endl;
+	this->r1 = Rectangle(x,y,length,0.5f,rot,color);
+	this->r2 = Rectangle((x)+cos(rot)*length/2.0f,y+(sin(rot))*length/2.0f,1.0f,1.0f,rot,color);
+	this->r3 = Rectangle((x)+cos(rot+M_PI)*length/2.0f,y+(sin(rot+M_PI))*length/2.0f,1.0f,1.0f,rot,color);
+
+	// static const GLfloat vertex_buffer_data [] = {
+	// 	0.0f, 0.0f, 0.0f,
+	// 	0.0f, 0.0f + height, 0.0f,
+	// 	0.0f + width, 0.0f + height, 0.0f,
+	// 	0.0f, 0.0f, 0.0f,
+	// 	0.0f + width, 0.0f, 0.0f,
+	// 	0.0f + width, 0.0f + height, 0.0f,
+	// };
+	// this->object = create3DObject(GL_TRIANGLES, 2*3, vertex_buffer_data, color, GL_FILL);	
+}
+
+void Fireline::draw(glm::mat4 VP) {
+    // glm::mat4 rotate    = glm::rotate((float) (this->rotation * M_PI / 180.0f), glm::vec3(1, 0, 0));
+    // Matrices.model = glm::mat4(1.0f);
+    // glm::mat4 translate = glm::translate (this->position);    // glTranslatef
+    // // No need as coords centered at 0, 0, 0 of cube arouund which we waant to rotate
+    // // rotate          = rotate * glm::translate(glm::vec3(0, -0.6, 0));
+    // Matrices.model *= (translate*rotate);
+    // glm::mat4 MVP = VP * Matrices.model;
+    // glUniformMatrix4fv(Matrices.MatrixID, 1, GL_FALSE, &MVP[0][0]);
+    // draw3DObject(this->object);
+	this->r1.draw(VP);
+	this->r2.draw(VP);
+	this->r3.draw(VP);
 }

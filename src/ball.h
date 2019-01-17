@@ -35,8 +35,9 @@ class Player {
 
 class Rectangle {
     public:
+        float rotation;
         Rectangle() {}
-        Rectangle(float x, float y, float width, float height, color_t color);
+        Rectangle(float x, float y, float w, float h, float rot , color_t color);
         glm::vec3 position;
         void draw(glm::mat4 VP);
         void set_position(float x, float y);
@@ -76,8 +77,11 @@ class Magnet {
 
 class Fireline {
     public:
+        Rectangle r1;
+        Rectangle r2;
+        Rectangle r3;
         Fireline() {}
-        Fireline(float x, float y, color_t color);
+        Fireline(float x, float y, float length, float rot, color_t color);
         glm::vec3 position;
         float rotation;
         void draw(glm::mat4 VP);
