@@ -49,6 +49,10 @@ timer.h
 /home/sawar/Documents/graphics/jetpack-highride/src/timer.h
 ball.h
 /home/sawar/Documents/graphics/jetpack-highride/src/ball.h
+iostream
+-
+iomanip
+-
 
 /home/sawar/Documents/graphics/jetpack-highride/src/main.h
 iostream

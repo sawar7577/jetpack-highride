@@ -71,6 +71,7 @@ struct bounding_box_t {
     float y;
     float width;
     float height;
+    float rotation;
 };
 
 bool detect_collision(bounding_box_t a, bounding_box_t b);
