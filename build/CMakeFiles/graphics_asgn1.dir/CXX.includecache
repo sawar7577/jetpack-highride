@@ -15,6 +15,8 @@ main.h
 /home/sawar/Documents/graphics/jetpack-highride/src/ball.h
 main.h
 /home/sawar/Documents/graphics/jetpack-highride/src/main.h
+list
+-
 
 /home/sawar/Documents/graphics/jetpack-highride/src/color.cpp
 main.h
@@ -57,15 +59,25 @@ iomanip
 /home/sawar/Documents/graphics/jetpack-highride/src/main.h
 iostream
 -
+iomanip
+-
 cmath
+-
+ctime
+-
+cstdio
 -
 fstream
 -
 vector
 -
+list
+-
 GL/glew.h
 -
 GLFW/glfw3.h
+-
+time.h
 -
 glm/glm.hpp
 -

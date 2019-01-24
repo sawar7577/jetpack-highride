@@ -4,23 +4,31 @@
 #define GLM_ENABLE_EXPERIMENTAL
 
 #include <iostream>
+#include <iomanip>
 #include <cmath>
+#include <ctime>
+#include <cstdio>
 #include <fstream>
 #include <vector>
-
+#include <list>
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
+#include <time.h>
+// #include "ball.h"
+
 
 #define GLM_FORCE_RADIANS
 #include <glm/glm.hpp>
 #include <glm/gtx/transform.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
+
 struct color_t {
     int r;
     int g;
     int b;
 };
+
 
 // nonedit.cpp
 GLFWwindow *initGLFW(int width, int height);
@@ -76,13 +84,16 @@ struct bounding_box_t {
 
 bool detect_collision(bounding_box_t a, bounding_box_t b);
 
-extern float screen_zoom, screen_center_x, screen_center_y;
+extern float screen_zoom, screen_center_x, screen_center_y, vertical_float, horizontal_float;
 void reset_screen();
 
 // ---- Colors ----
 extern const color_t COLOR_RED;
+extern const color_t COLOR_FIRERED;
+extern const color_t COLOR_FIREYELLOW;
 extern const color_t COLOR_GREEN;
 extern const color_t COLOR_BLACK;
 extern const color_t COLOR_BACKGROUND;
+
 
 #endif

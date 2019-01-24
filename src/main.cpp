@@ -1,6 +1,10 @@
 #include "main.h"
 #include "timer.h"
 #include "ball.h"
+// #include "lists.h"
+// #include "collision.h"
+
+// #include "lists.h"
 #include <iostream>
 #include <iomanip>      // std::setprecision
 using namespace std;
@@ -13,13 +17,14 @@ GLFWwindow *window;
 * Customizable functions *
 **************************/
 
-Ball ball1, ball2;
 Player playa;
 Floor level;
 Magnet mag;
-Fireline fr,fr2;
-
+Numbers num;
+CooldownBar cl;
+Viserion vs;
 int flag;
+
 
 glm::vec3 rotateAxes(glm::vec3 axis, float rotation){
     glm::mat4 rotationMat(1); // Creates a identity matrix
@@ -27,7 +32,8 @@ glm::vec3 rotateAxes(glm::vec3 axis, float rotation){
     glm::vec3 ret =  glm::vec3(rotationMat * glm::vec4(axis, 1.0));
     return ret;
 }
-bool check(glm::vec3 l, Rectangle a, Player b) {
+
+bool check(glm::vec3 l, Rectangle a, Rectangle b) {
    if(abs(glm::dot(glm::vec3(a.position.x-b.position.x, a.position.y-b.position.y, 0), l)) > (double)(a.width/2)*abs(glm::dot(rotateAxes(glm::vec3(1,0,0),a.rotation),l)) + (double)(a.height/2)*abs(glm::dot(rotateAxes(glm::vec3(0,1,0),a.rotation),l)) + (double)(b.width/2)*abs(glm::dot(rotateAxes(glm::vec3(1,0,0),b.rotation),l)) + (double)(b.height/2)*abs(glm::dot(rotateAxes(glm::vec3(0,1,0),b.rotation),l))){
         return true;
     }
@@ -35,7 +41,7 @@ bool check(glm::vec3 l, Rectangle a, Player b) {
         return false;
     }
 }
-bool collision(Rectangle a, Player b) {
+bool collision(Rectangle a, Rectangle b) {
     if(check(rotateAxes(glm::vec3(1,0,0),a.rotation),a,b) 
     || check(rotateAxes(glm::vec3(0,1,0),a.rotation),a,b) 
     || check(rotateAxes(glm::vec3(1,0,0),b.rotation),a,b) 
@@ -48,15 +54,82 @@ bool collision(Rectangle a, Player b) {
 }
 
 
-float screen_zoom = 1, screen_center_x = 0, screen_center_y = 0;
+template <class Type1, class Type2> bool collision_checker(const Type1 &a, const Type2 &b) {
+    for(int i = 0 ; i < a.recs.size() ; ++i) {
+        for(int j = 0 ; j < b.recs.size() ; ++j) {
+            if(collision(a.recs[i] , b.recs[j])){
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+template <typename Type> void draw_sprites(list <Type> &l, glm::mat4 VP) {
+    typename list <Type>::iterator it;
+    for(it = l.begin() ; it != l.end() ; ++it) {
+        (*it).draw(VP);
+    }
+}
+
+template <typename Type> void tick_sprites(list <Type> &l) {
+    typename list <Type> :: iterator it;
+    for(it = l.begin() ; it != l.end() ; ++it) {
+        (*it).tick();
+    }
+}
+
+void tick_magnet(list <Magnet> &l, Player &player) {
+    list <Magnet> :: iterator it;
+    for(it = l.begin() ; it != l.end() ; ++it) {
+        (*it).tick(player);
+    }
+}
+
+void magnet_response(list <Magnet> &l, Player &player) {
+    list <Magnet> :: iterator it;
+    for(it = l.begin() ; it != l.end() ; ++it) {
+        if(collision_checker((*it), player)) {
+            player.momentum = glm::vec3(0, 0, 0);
+        }
+    }
+}
+
+template <typename Type> void remove_balloons(list <Type> &l) {
+    float top    = screen_center_y + vertical_float / screen_zoom;
+    float bottom = screen_center_y - vertical_float / screen_zoom;
+    float left   = screen_center_x - horizontal_float / screen_zoom;
+    float right  = screen_center_x + horizontal_float / screen_zoom;
+    // std::cout << l.size() << std::endl;
+    typename list <Type> :: iterator it = l.begin();
+    while(it != l.end()) {
+        if((*it).position.y < bottom) {
+            l.erase(it++);
+        }
+        else {
+            it++;
+        }
+    }
+}
+
+void remove_flares(list <Jetflare> &l) {
+    list <Jetflare> :: iterator it = l.begin();
+    while(it != l.end()) {
+        if( (std::clock() - (*it).start)/(double)CLOCKS_PER_SEC > 0.5f ) {
+            l.erase(it++);
+        }
+        else {
+            it++;
+        }
+    }
+}
+
+float screen_zoom = 1, screen_center_x = 0, screen_center_y = 0, vertical_float = 4, horizontal_float  = 4;
 float camera_rotation_angle = 0;
 
 Timer t60(1.0 / 60);
 
 /* Render the scene with openGL */
-/* Edit this function according to your assignment */
-// glm::vec3 eye ( 0, 0, 1 );
-// glm::vec3 target (0, 0, 0);
 
 void draw(GLFWwindow *window) {
     // clear the color and depth in the frame buffer
@@ -90,14 +163,19 @@ void draw(GLFWwindow *window) {
     glm::mat4 MVP;  // MVP = Projection * View * Model
 
     // Scene render
-    ball1.draw(VP);
-    ball2.draw(VP);
+    draw_sprites(ball_list, VP);
+    draw_sprites(fireline_list, VP);    
+    draw_sprites(firebeam_list, VP);
+    draw_sprites(boomerang_list, VP);   
+    draw_sprites(powerup_list, VP);
+    draw_sprites(waterballoon_list, VP);
+    draw_sprites(magnet_list, VP);
+    draw_sprites(jetflare_list, VP);
+    num.draw(VP);
     playa.draw(VP);
-    mag.draw(VP);
-    // fr.r1.draw(VP);
-    // fr.r2.draw(VP);
-    fr.draw(VP);
-    fr2.draw(VP);
+    cl.draw(VP);
+    vs.draw(VP);
+    // b.draw(VP);
 
     level.draw(VP, target.x);
 
@@ -112,13 +190,20 @@ void tick_input(GLFWwindow *window) {
 }
 
 void tick_elements(GLFWwindow *window) {
-    if(flag == 0){
-    ball1.tick();
-    ball2.tick();
-    // mag.tick(playa);
-
+    tick_sprites(ball_list);
+    tick_sprites(firebeam_list);    
+    tick_sprites(boomerang_list);
+    tick_sprites(powerup_list);
+    tick_sprites(waterballoon_list);
+    tick_sprites(jetflare_list);
+    tick_magnet(magnet_list,playa);
+    magnet_response(magnet_list,playa);
+    remove_balloons(waterballoon_list);
+    remove_flares(jetflare_list);
     playa.tick(window);
-    }
+    cl.tick((std::clock() - playa.cooldown)/(double)CLOCKS_PER_SEC);
+    num.tick();
+    vs.tick();
     // camera_rotation_angle += 1;
 }
 
@@ -128,15 +213,19 @@ void initGL(GLFWwindow *window, int width, int height) {
     /* Objects should be created before any other gl function and shaders */
     // Create the models
 
-    ball1       = Ball(2.0f, 0, COLOR_RED);
-    ball2       = Ball(-2.0f, 0, COLOR_GREEN);
-    ball2.speed = -1;
+    // ball1       = Ball(2.0f, 0, COLOR_RED);
+    // ball2       = Ball(-2.0f, 0, COLOR_GREEN);
     playa       = Player(screen_center_x, screen_center_y, 0.75f, 1.15f, 2.0f, COLOR_BLACK);
-    mag         = Magnet(2.0f, 2.0f, 1.0f, 1.0f, COLOR_BLACK);
-    fr          = Fireline(4.0f,2.0f,2.0f,M_PI/3,COLOR_GREEN);
-    fr2          = Fireline(1.0f,2.0f,2.0f,M_PI/6,COLOR_GREEN);    
     level       = Floor(-10.0f, -4.0f);
-
+    num         = Numbers(-2.0f, 2.0f, 0.5f, 1.0f, "1111110",COLOR_BLACK);
+    cl          = CooldownBar(-3.0f, -1.0f, 10.0f, 1.0f, COLOR_BLACK);
+    vs          = Viserion(-10.0f, -1.0f, 1.0f, 1.0f, COLOR_BLACK);
+    magnet_list.push_back(Magnet(2.0f, 2.0f, 1.0f, 1.0f, COLOR_BLACK));
+    boomerang_list.push_back(Boomerang(6.0f,-1.0f,0.0f,0.0f,1.0f,1.0f,COLOR_BLACK));
+    firebeam_list.push_back(Firebeam(6.0f,2.0f,2.0f,0,COLOR_GREEN));
+    fireline_list.push_back(Fireline(4.0f,2.0f,2.0f,M_PI/3,COLOR_GREEN));
+    fireline_list.push_back(Fireline(10.0f,2.0f,2.0f,M_PI/6,COLOR_GREEN));
+    powerup_list.push_back(Powerup(2.0f, 2.0f, 1.0f, 1.0f, 1.0f, COLOR_FIRERED));
     // Create and compile our GLSL program from the shaders
     
     programID = LoadShaders("Sample_GL.vert", "Sample_GL.frag");;
@@ -185,19 +274,6 @@ int main(int argc, char **argv) {
 
             tick_elements(window);
             tick_input(window);
-            // if(flag == 0 && collision(fr.r1, playa)){
-            //     flag = 1;
-            // }
-
-            // if(flag == 0 && collision(fr.r2, playa)){
-            //     flag = 1;
-            // }
-            // if(flag == 0 && collision(fr.r3, playa)){
-            //     flag = 1;
-            // }
-            // if(flag == 0 && collision(Rectangle(mag.position.x,mag.position.y,mag.width,mag.height,mag.rotation,COLOR_RED), playa)){
-            //     playa.momentum = glm::vec3(0);   
-            // }
         }
 
         // Poll for Keyboard and mouse events
@@ -212,11 +288,13 @@ bool detect_collision(bounding_box_t a, bounding_box_t b) {
            (abs(a.y - b.y) * 2 < (a.height + b.height));
 }
 
+
+
 void reset_screen() {
-    float top    = screen_center_y + 4 / screen_zoom;
-    float bottom = screen_center_y - 4 / screen_zoom;
-    float left   = screen_center_x - 4 / screen_zoom;
-    float right  = screen_center_x + 4 / screen_zoom;
+    float top    = screen_center_y + vertical_float / screen_zoom;
+    float bottom = screen_center_y - vertical_float / screen_zoom;
+    float left   = screen_center_x - horizontal_float / screen_zoom;
+    float right  = screen_center_x + horizontal_float / screen_zoom;
     float apratio = 1280.0/720.0; 
     Matrices.projection = glm::ortho(left*apratio, right*apratio, bottom, top, 0.1f, 500.0f);
 }
