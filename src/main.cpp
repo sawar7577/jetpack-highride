@@ -109,6 +109,8 @@ template <typename Type1, typename Type2> void balloonfire_response(list <Type1>
         for(it2 = balloonlist.begin() ; it2!=balloonlist.end() ;){
             if(collision_checker((*it),(*it2))){
                 add_steam(steam_list, (*it).position.x, (*it).position.y, (*it).width);
+                (*it).destroy();
+                (*it2).destroy();
                 firelist.erase(it++);
                 balloonlist.erase(it2++);
             }
@@ -118,6 +120,7 @@ template <typename Type1, typename Type2> void balloonfire_response(list <Type1>
         }
     }
 }
+
 
 template <typename Type> void coin_response(list <Type> &l, Player &player) {
     typename list <Type> :: iterator it = l.begin();
@@ -131,6 +134,20 @@ template <typename Type> void coin_response(list <Type> &l, Player &player) {
         }
     }
 }
+
+template <typename Type> void powerup_response(list <Type> &l, Player &player) {
+    typename list <Type> :: iterator it;
+    for(it = l.begin() ; it!=l.end();){
+        if(collision_checker((*it),player)){
+            (*it).action(player);
+            l.erase(it++);
+        }
+        else {
+            it++;
+        }
+    }
+}
+
 
 template <typename Type> void remove_balloons(list <Type> &l) {
     float top    =+ vertical_float / screen_zoom;
@@ -174,12 +191,35 @@ void remove_flares(list <Jetflare> &l) {
     }
 }
 
+template <typename Type> void invincibility_state(list <Type> &l, Player &player) {
+    typename list <Type> :: iterator it;
+    for(it = l.begin() ; it!=l.end() ;){
+        if(collision_checker((*it),player)) {
+            (*it).destroy();
+            l.erase(it++);
+        }
+        else{
+            it++;
+        }
+    }
+
+}
+
+template <typename Type> void remove_with_time(list <Type> &l, float tme) {
+    typename list <Type> :: iterator it = l.begin();
+    while(it != l.end()) {
+        if( (std::clock() - (*it).start)/(double)CLOCKS_PER_SEC > tme ) {
+            l.erase(it++);
+        }
+        else {
+            it++;
+        }
+    }
+}
+
 void ring_response(list <Ring> &l, Player &player) {
     list <Ring> :: iterator it;
     for(it = l.begin() ; it!=l.end() ; ++it) {
-        std::cout << std::setprecision(1);
-        std::cout << (*it).position.x << " " << (*it).position.y << std::endl;
-        std::cout << (*it).recs[0].position.x << " " << (*it).recs[0].position.y << " " << player.position.x << " " << player.position.y << std::endl;
         if(collision_checker((*it),player) && !(*it).activated){
             (*it).activated = true;
             (*it).rotation = M_PI;
@@ -261,12 +301,16 @@ void draw(GLFWwindow *window) {
     draw_sprites(jetflare_list, VP);
     draw_sprites(steam_list, VP);
     draw_sprites(iceball_list, VP);
-    draw_sprites(ring_list, VP);
+    draw_sprites(destroyed_list, VP);
+    draw_sprites(sword_list, VP);
+    draw_sprites(heart_list, VP);
+    draw_sprites(bolt_list, VP);
+    draw_sprites(firebeamconfusion_list, VP);
+    draw_sprites(viserion_list, VP);
     draw_score(VP);
     
     playa.draw(VP);
     cl.draw(VP);
-    vs.draw(VP);
 
     level.draw(VP, target.x);
 }
@@ -299,16 +343,37 @@ void tick_elements(GLFWwindow *window) {
     tick_sprites(firebeam_list);    
     tick_sprites(boomerang_list);
     tick_sprites(powerup_list);
+    tick_sprites(sword_list);
+    tick_sprites(heart_list);
+    tick_sprites(bolt_list);
     tick_sprites(waterballoon_list);
     tick_sprites(jetflare_list);
+    tick_sprites(destroyed_list);
     // tick_sprite_player(magnet_list,playa);
+    tick_sprite_player(firebeamconfusion_list,playa);
     tick_sprite_player(ring_list,playa);
     tick_sprites(steam_list);
     tick_sprites(iceball_list);
+    tick_sprites(viserion_list);
     playa.tick(window);
 
+    
+    // invincibility
+    if(playa.invincibility){
+        invincibility_state(ball_list,playa);
+        invincibility_state(firebeam_list,playa);
+        invincibility_state(fireline_list,playa);
+        invincibility_state(boomerang_list,playa);
+        invincibility_state(powerup_list,playa);
+        invincibility_state(magnet_list,playa);
+        invincibility_state(firebeamconfusion_list,playa);
+        invincibility_state(viserion_list,playa);
+    }
+    
     //response of sprites
     magnet_response(magnet_list,playa);
+    powerup_response(sword_list, playa);
+    // powerup_response(sword_list, playa);
     balloonfire_response(firebeam_list, waterballoon_list);
     balloonfire_response(fireline_list, waterballoon_list);
     coin_response(ball_list, playa);
@@ -316,8 +381,11 @@ void tick_elements(GLFWwindow *window) {
     
     
     remove_balloons(waterballoon_list);
-    remove_flares(jetflare_list);
-    
+    // remove_flares(jetflare_list);
+    remove_with_time(jetflare_list, 0.5f);
+    remove_with_time(destroyed_list, 2.5f);
+    remove_with_time(firebeamconfusion_list, 10.f);
+
    //remove out of scene objects
     remove_beyondbounds(fireline_list);
     remove_beyondbounds(firebeam_list);
@@ -328,7 +396,6 @@ void tick_elements(GLFWwindow *window) {
 
     setscore(playa.score, screen_center_x);
     cl.tick((std::clock() - playa.cooldown)/(double)CLOCKS_PER_SEC);
-    vs.tick();
     // camera_rotation_angle += 1;
 }
 
@@ -352,13 +419,16 @@ void initGL(GLFWwindow *window, int width, int height) {
     hsh.push_back("1111111");
     hsh.push_back("1110111");
     cl          = CooldownBar(-3.0f, vertical_float - vertical_float/60, 2*1280*horizontal_float/(screen_zoom*720), vertical_float/30, COLOR_BLACK);
-    vs          = Viserion(screen_center_x, 3.0f, 2.0f, 2.0f, COLOR_BLACK);
+    viserion_list.push_back(Viserion(screen_center_x, 3.0f, 2.0f, 2.0f, COLOR_BLACK));
     magnet_list.push_back(Magnet(2.0f, 2.0f, 1.0f, 1.0f, COLOR_BLACK));
     boomerang_list.push_back(Boomerang(6.0f,-1.0f,0.0f,0.0f,1.0f,1.0f,COLOR_BLACK));
     firebeam_list.push_back(Firebeam(6.0f,2.0f,2.0f,0,COLOR_GREEN));
     fireline_list.push_back(Fireline(4.0f,2.0f,2.0f,M_PI/3,COLOR_GREEN));
     fireline_list.push_back(Fireline(10.0f,2.0f,2.0f,M_PI/6,COLOR_GREEN));
-    powerup_list.push_back(Powerup(2.0f, 2.0f, 1.0f, 1.0f, 1.0f, COLOR_FIRERED));
+    firebeamconfusion_list.push_back(Firebeamconfusion(-1.0f,-1.0f, 2*horizontal_float, 1.0f, COLOR_RED));
+    sword_list.push_back(Sword(2.0f, 2.0f, 1.0f, 1.0f, 1.0f, COLOR_FIRERED));
+    heart_list.push_back(Heart(-2.0f, 4.0f, 1.0f, 1.0f, 1.0f, COLOR_FIRERED));
+    
     // Create and compile our GLSL program from the shaders
     
     programID = LoadShaders("Sample_GL.vert", "Sample_GL.frag");;

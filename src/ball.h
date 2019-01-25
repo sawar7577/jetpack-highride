@@ -12,12 +12,14 @@ class Rectangle {
         float rotation;
         float width;
         float height;
+        clock_t start;
         Rectangle() {}
         Rectangle(float x, float y, float w, float h, float rot , color_t color);
         glm::vec3 position;
+        glm::vec3 momentum;
         void draw(glm::mat4 VP);
         void set_position(float x, float y);
-        void tick(GLFWwindow *window);
+        void tick();
     private:
         VAO *object;
 };
@@ -36,6 +38,7 @@ class Sprite {
         void draw(glm::mat4 VP);
         void set_position(float x, float y);
         void tick();
+        void destroy();
 };
 
 class Fireline : public Sprite {
@@ -63,13 +66,6 @@ class Firebeam : public Sprite {
         void tick();
 };
 
-class Firebeamconfusion : public Sprite {
-    public:
-        clock_t start;
-        Firebeamconfusion () {}
-        Firebeamconfusion(float x, float y, float width, float height, color_t color);
-};
-
 
 class Ball : public Sprite {
     public:
@@ -83,11 +79,21 @@ class Player : public Sprite {
     public:
         int score;
         float mass;
+        bool invincibility;
+        clock_t inv;
         clock_t cooldown;
         glm::vec3 momentum;
         Player() {} 
         Player(float x, float y, float width, float height, float mass, color_t color);
         void tick(GLFWwindow *window);
+};
+
+class Firebeamconfusion : public Sprite {
+    public:
+        clock_t start;
+        Firebeamconfusion () {}
+        Firebeamconfusion(float x, float y, float width, float height, color_t color);
+        void tick(Player &player);
 };
 
 class Floor : public Sprite {
@@ -133,6 +139,28 @@ class Powerup : public Sprite {
         Powerup() {}
         Powerup(float x, float y, float width, float height, float mass, color_t color);
         void tick();
+        void action(Player &player);
+};
+
+class Sword : public Powerup {
+    public:
+        Sword() {}
+        Sword(float x, float y, float width, float height, float mass, color_t color);
+        void action(Player &player);
+};
+
+class Heart : public Powerup {
+    public:
+        Heart() {}
+        Heart(float x, float y, float width, float height, float mass, color_t color);
+        void action(Player &player);
+};
+
+class Bolt : public Powerup {
+    public:
+        Bolt() {}
+        Bolt(float x, float y, float width, float height, float mass, color_t color);
+        void action(Player &player);
 };
 
 class Jetflare : public Sprite {
@@ -214,8 +242,11 @@ extern list <Steam> steam_list;
 extern list <Iceball> iceball_list;
 extern list <Ring> ring_list;
 extern list <Viserion> viserion_list;
-
-
+extern list <Sword> sword_list;
+extern list <Heart> heart_list;
+extern list <Bolt> bolt_list;
+extern list <Firebeamconfusion> firebeamconfusion_list;
+extern list <Rectangle> destroyed_list;
 
 
 

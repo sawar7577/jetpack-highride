@@ -13,6 +13,11 @@ list <Steam> steam_list;
 list <Iceball> iceball_list;
 list <Ring> ring_list;
 list <Viserion> viserion_list;
+list <Sword> sword_list;
+list <Heart> heart_list;
+list <Bolt> bolt_list;
+list <Firebeamconfusion> firebeamconfusion_list;
+list <Rectangle> destroyed_list;
 
 
 void add_coin(list <Ball> &l) {
@@ -40,6 +45,7 @@ void add_jetflares(list <Jetflare> &l, float x, float y) {
 void add_iceballs(list <Iceball> &l, float x, float y) {
 	unsigned long ret = xorshf96();
 	if(ret%100 == 0) {
+		std::cout << "here   " << std::endl;
 		l.push_back(Iceball(x,y, 0.5f, 0.5f, 1.0f, COLOR_BLACK));
 	}
 }
@@ -63,6 +69,15 @@ void Sprite::set_position(float x, float y) {
     this->position = glm::vec3(x, y, 0);
 }
 
+void Sprite::destroy() {
+	for(int i = 0 ; i < this->recs.size() ; ++i) {
+		unsigned long ret = xorshf96();
+		this->recs[i].start = std::clock();
+		this->recs[i].momentum = glm::vec3(sin ( M_PI/(64*(1+ret%7) )) ,-1.4f*sin ( M_PI/(64*(1+ret%7) )),0);
+		destroyed_list.push_back(this->recs[i]);
+	}
+}
+
 Ball::Ball(float x, float y, color_t color) : Sprite(x, y , 0.25, 0.25, M_PI/4, COLOR_FIREYELLOW){
 	this->recs.push_back(Rectangle(x, y, 0.25f, 0.25f, M_PI/4, COLOR_FIREYELLOW));
 }
@@ -76,21 +91,22 @@ Player::Player(float x, float y, float width, float height, float mass, color_t 
 	this->score = 0;
 	this->momentum = glm::vec3(0, 0, 0);
 	this->cooldown = std::clock();
-	
+	this->inv = -5.0f;
+	this->invincibility = false;
 	this->recs.push_back(Rectangle(x+width/2-width/3,y-height/10,2*width/3,height/2,0,COLOR_GREEN));
 	this->relpos.push_back(glm::vec3(width/2-width/3,-height/10,0));
 	this->recs.push_back(Rectangle(x-width/2+width/6,y,width/3,height/3,0,COLOR_RED));
 	this->relpos.push_back(glm::vec3(-width/2+width/6,0,0));	
 	this->recs.push_back(Rectangle(x-width/2+width/6,y+height/8,width/5,2*height/8,0,COLOR_RED));
 	this->relpos.push_back(glm::vec3(-width/2+width/6,height/8,0));	
-	this->recs.push_back(Rectangle(x+width/2-width/3+width/5,y-height/4-height/8,width/5,height/4,0,COLOR_RED));
-	this->relpos.push_back(glm::vec3(width/2-width/3+width/5,-height/4-height/8,0));	
-	this->recs.push_back(Rectangle(x+width/2-width/3-width/5,y-height/4-height/8,width/5,height/4,0,COLOR_RED));
-	this->relpos.push_back(glm::vec3(width/2-width/3-width/5,-height/4-height/8,0));	
 	this->recs.push_back(Rectangle(x+width/2-width/3,y-height/10+height/4+height/40,width/8,height/20,0,COLOR_RED));
 	this->relpos.push_back(glm::vec3(width/2-width/3,-height/10+height/4+height/40,0));	
 	this->recs.push_back(Rectangle(x+width/2-width/3,y-height/10+height/4+height/20+13*height/80,2*width/3,13*height/40,0,COLOR_BLACK));
 	this->relpos.push_back(glm::vec3(width/2-width/3,-height/10+height/4+height/20+13*height/80,0));
+	this->recs.push_back(Rectangle(x+width/2-width/3+width/5,y-height/4-height/8,width/5,height/4,0,COLOR_RED));
+	this->relpos.push_back(glm::vec3(width/2-width/3+width/5,-height/4-height/8,0));	
+	this->recs.push_back(Rectangle(x+width/2-width/3-width/5,y-height/4-height/8,width/5,height/4,0,COLOR_RED));
+	this->relpos.push_back(glm::vec3(width/2-width/3-width/5,-height/4-height/8,0));	
 }
 
 
@@ -99,7 +115,7 @@ void Player::tick(GLFWwindow *window) {
     float top    = screen_center_y + vertical_float / 1;
     float bottom = screen_center_y - 9*vertical_float / (10);
 
-    // this->momentum.x += (this->momentum.x*(-0.01f));
+    this->momentum.x += (this->momentum.x*(-0.01f));
     	if(glfwGetKey(window,GLFW_KEY_LEFT)){
         this->momentum.x -= 0.0036f;
     }
@@ -135,6 +151,9 @@ void Player::tick(GLFWwindow *window) {
 		this->recs[i].position = this->position + this->relpos[i];
 	}
     
+	if( (std::clock() - this->inv)/(float)CLOCKS_PER_SEC > 10.f){
+		this->invincibility = false;
+	}
 	screen_center_x = this->position.x;
 }
 
@@ -143,6 +162,7 @@ Rectangle::Rectangle(float x, float y, float w, float h, float rot, color_t colo
     this->rotation = rot;
 	this->width = w;
 	this->height = h;
+	this->momentum = glm::vec3(0,0,0);
 
 	GLfloat vertex_buffer_data [] = {
 		0.0f - this->width/2.0f, 0.0f + this->height/2.0f, 0.0f,
@@ -165,6 +185,10 @@ void Rectangle::draw(glm::mat4 VP) {
     glm::mat4 MVP = VP * Matrices.model;
     glUniformMatrix4fv(Matrices.MatrixID, 1, GL_FALSE, &MVP[0][0]);
     draw3DObject(this->object);
+}
+
+void Rectangle::tick() {
+	this->position += this->momentum;
 }
 
 Floor::Floor(float x, float y):Sprite(x,y,0,0,0,COLOR_BLACK){
@@ -227,16 +251,23 @@ void Magnet::tick(Player &player) {
 Fireline::Fireline(float x, float y, float length, float rot, color_t color) {
 	this->position = glm::vec3(x, y, 0);
 	this->recs.push_back(Rectangle(x,y,length,0.25f,rot,COLOR_FIRERED));
+	this->relpos.push_back(glm::vec3(0,0,0));
 	this->recs.push_back(Rectangle((x)+cos(rot)*length/2.0f,y+(sin(rot))*length/2.0f,0.5f,0.5f,rot+M_PI/4,COLOR_FIREYELLOW));
+	this->relpos.push_back(glm::vec3(cos(rot)*length/2.0f,(sin(rot))*length/2.0f,0));	
 	this->recs.push_back(Rectangle((x)+cos(rot+M_PI)*length/2.0f,y+(sin(rot+M_PI))*length/2.0f,0.5f,0.5f,rot+M_PI/4,COLOR_FIREYELLOW));	
+	this->relpos.push_back(glm::vec3(cos(rot+M_PI)*length/2.0f,(sin(rot+M_PI))*length/2.0f,0));	
 }
 
 Firebeam::Firebeam(float x, float y, float length, float rot, color_t color) {
 	this->position = glm::vec3(x, y, 0);
 	this->speed = 0.015f;
 	this->recs.push_back(Rectangle(x,y,length,0.25f,rot,COLOR_FIRERED));
+	this->relpos.push_back(glm::vec3(0,0,0));
 	this->recs.push_back(Rectangle((x)+cos(rot)*length/2.0f,y+(sin(rot))*length/2.0f,0.5f,0.5f,rot+M_PI/4,COLOR_FIREYELLOW));
+	this->relpos.push_back(glm::vec3(-length/2.0f,0,0));		
 	this->recs.push_back(Rectangle((x)+cos(rot+M_PI)*length/2.0f,y+(sin(rot+M_PI))*length/2.0f,0.5f,0.5f,rot+M_PI/4,COLOR_FIREYELLOW));	
+	this->relpos.push_back(glm::vec3(length/2.0f,0.0f,0));	
+
 }
 
 void Firebeam::tick() {
@@ -246,20 +277,18 @@ void Firebeam::tick() {
     float right  = screen_center_x + horizontal_float / 1;
 
 	this->position.y += this->speed;
-	for(int i = 0 ; i < this->recs.size() ; ++i) {
-		this->recs[i].position.y += this->speed;
-	}
+
 	if(this->position.y > top ) {
+		this->position.y = top;
 		this->speed *= -1;
-		for(int i = 0 ; i < this->recs.size() ; ++i) {
-			this->recs[i].position.y = top;
-		}
 	}
 	if( this->position.y < bottom) {
+		this->position.y = bottom;
 		this->speed *= -1;
-		for(int i = 0 ; i < this->recs.size() ; ++i) {
-			this->recs[i].position.y = bottom;
-		}
+	}
+
+	for(int i = 0 ; i < this->recs.size() ; ++i) {
+		this->recs[i].position = this->position + this->relpos[i];
 	}
 }
 
@@ -295,16 +324,14 @@ void Boomerang::tick() {
 
 Powerup::Powerup(float x, float y, float width, float height, float mass, color_t color) : Sprite(x, y, width, height, 0, color) {
 	this->mass = mass;
-	this->momentum = glm::vec3(-0.00,0,0);
-	this->recs.push_back(Rectangle(x, y, width, height, 0, color));
-	this->relpos.push_back(glm::vec3(0, 0, 0));
+	this->momentum = glm::vec3(-0.1f,0,0);
 }
 
 void Powerup::tick() {
 	float top    = screen_center_y + vertical_float / 1;
     float bottom = screen_center_y - 9*vertical_float / (1*10);
 	
-	this->momentum.y -= 0.00125f;
+	this->momentum.y -= 0.000125f;
     this->position += this->momentum / this->mass;
 	if(this->position.y - this->height/2 < bottom){
 		this->momentum.y *= (-1);
@@ -319,6 +346,149 @@ void Powerup::tick() {
 	}
 
 }
+
+Sword::Sword(float x, float y, float width, float height, float mass, color_t color) : Powerup(x, y, width, height, mass, color) {
+
+	this->recs.push_back(Rectangle(0, 0, width/12, height/7, 0, COLOR_SILVER));
+	this->relpos.push_back(glm::vec3(0, 6*height/14, 0));
+
+	this->recs.push_back(Rectangle(0, 0, width/7, height/7, 0, COLOR_SILVER));
+	this->relpos.push_back(glm::vec3(0, 4*height/14, 0));
+	
+	this->recs.push_back(Rectangle(0, 0, width/7, height/7, 0, COLOR_SILVER));
+	this->relpos.push_back(glm::vec3(0, 2*height/14, 0));
+
+	this->recs.push_back(Rectangle(0, 0, width/7, height/7, 0, COLOR_SILVER));
+	this->relpos.push_back(glm::vec3(0, 0, 0));
+
+	this->recs.push_back(Rectangle(0, 0, width/7, height/7, 0, COLOR_BLACK));
+	this->relpos.push_back(glm::vec3(0, -6*height/14, 0));
+
+	this->recs.push_back(Rectangle(0, 0, width/7, height/7, 0, COLOR_BLACK));
+	this->relpos.push_back(glm::vec3(0, -4*height/14, 0));
+	
+	this->recs.push_back(Rectangle(0, 0, width/7, height/7, 0, COLOR_SILVER));
+	this->relpos.push_back(glm::vec3(0, -2*height/14, 0));
+
+	this->recs.push_back(Rectangle(0, 0, width/7, height/7, 0, COLOR_BLACK));
+	this->relpos.push_back(glm::vec3(-2*width/14, -4*height/14, 0));
+
+	this->recs.push_back(Rectangle(0, 0, width/7, height/7, 0, COLOR_BLACK));
+	this->relpos.push_back(glm::vec3(2*width/14, -4*height/14, 0));
+}
+
+void Sword::action(Player &player) {
+	player.invincibility = std::clock();
+}
+
+Bolt::Bolt(float x, float y, float width, float height, float mass, color_t color) : Powerup(x, y, width, height, mass, color) {
+	
+	this->recs.push_back(Rectangle(0, 0, width/12, height/7, 0, COLOR_SILVER));
+	this->relpos.push_back(glm::vec3(0, 6*height/14, 0));
+
+	this->recs.push_back(Rectangle(0, 0, width/7, height/7, 0, COLOR_SILVER));
+	this->relpos.push_back(glm::vec3(0, 4*height/14, 0));
+	
+	this->recs.push_back(Rectangle(0, 0, width/7, height/7, 0, COLOR_SILVER));
+	this->relpos.push_back(glm::vec3(0, 2*height/14, 0));
+
+	this->recs.push_back(Rectangle(0, 0, width/7, height/7, 0, COLOR_SILVER));
+	this->relpos.push_back(glm::vec3(0, 0, 0));
+
+	this->recs.push_back(Rectangle(0, 0, width/7, height/7, 0, COLOR_BLACK));
+	this->relpos.push_back(glm::vec3(0, -6*height/14, 0));
+
+	this->recs.push_back(Rectangle(0, 0, width/7, height/7, 0, COLOR_BLACK));
+	this->relpos.push_back(glm::vec3(0, -4*height/14, 0));
+	
+	this->recs.push_back(Rectangle(0, 0, width/7, height/7, 0, COLOR_SILVER));
+	this->relpos.push_back(glm::vec3(0, -2*height/14, 0));
+
+	this->recs.push_back(Rectangle(0, 0, width/7, height/7, 0, COLOR_BLACK));
+	this->relpos.push_back(glm::vec3(-2*width/14, -4*height/14, 0));
+
+	this->recs.push_back(Rectangle(0, 0, width/7, height/7, 0, COLOR_BLACK));
+	this->relpos.push_back(glm::vec3(2*width/14, -4*height/14, 0));
+}
+
+
+
+Heart::Heart(float x, float y, float width, float height, float mass, color_t color) : Powerup(x, y, width, height, mass, color) {
+
+	this->recs.push_back(Rectangle(0, 0, width/7, height/7, 0, color));
+	this->relpos.push_back(glm::vec3(-4*width/14, 2*height/14, 0));
+	
+	this->recs.push_back(Rectangle(0, 0, width/7, height/7, 0, color));
+	this->relpos.push_back(glm::vec3(-4*width/14, -2*height/14, 0));
+	
+	this->recs.push_back(Rectangle(0, 0, width/7, height/7, 0, color));
+	this->relpos.push_back(glm::vec3(-4*width/14, -0*height/14, 0));
+
+	this->recs.push_back(Rectangle(0, 0, width/7, height/7, 0, color));
+	this->relpos.push_back(glm::vec3(0, 0, 0));
+
+	this->recs.push_back(Rectangle(0, 0, width/7, height/7, 0, color));
+	this->relpos.push_back(glm::vec3(0, -6*height/14, 0));
+
+	this->recs.push_back(Rectangle(0, 0, width/7, height/7, 0, color));
+	this->relpos.push_back(glm::vec3(0, -4*height/14, 0));
+	
+	this->recs.push_back(Rectangle(0, 0, width/7, height/7, 0, color));
+	this->relpos.push_back(glm::vec3(0, -2*height/14, 0));
+		
+	this->recs.push_back(Rectangle(0, 0, width/7, height/7, 0, color));
+	this->relpos.push_back(glm::vec3(-2*width/14, -2*height/14, 0));
+
+	this->recs.push_back(Rectangle(0, 0, width/7, height/7, 0, color));
+	this->relpos.push_back(glm::vec3(-2*width/14, -0*height/14, 0));
+
+	this->recs.push_back(Rectangle(0, 0, width/7, height/7, 0, color));
+	this->relpos.push_back(glm::vec3(-2*width/14, -4*height/14, 0));
+	
+	this->recs.push_back(Rectangle(0, 0, width/7, height/7, 0, color));
+	this->relpos.push_back(glm::vec3(-2*width/14, 2*height/14, 0));
+
+	this->recs.push_back(Rectangle(0, 0, width/7, height/7, 0, color));
+	this->relpos.push_back(glm::vec3(-2*width/14, -2*height/14, 0));
+
+	this->recs.push_back(Rectangle(0, 0, width/7, height/7, 0, color));
+	this->relpos.push_back(glm::vec3(-2*width/14, -0*height/14, 0));
+
+	this->recs.push_back(Rectangle(0, 0, width/7, height/7, 0, color));
+	this->relpos.push_back(glm::vec3(-2*width/14, -4*height/14, 0));
+
+	this->recs.push_back(Rectangle(0, 0, width/7, height/7, 0, color));
+	this->relpos.push_back(glm::vec3(2*width/14, -2*height/14, 0));
+
+	this->recs.push_back(Rectangle(0, 0, width/7, height/7, 0, color));
+	this->relpos.push_back(glm::vec3(2*width/14, -0*height/14, 0));
+
+	this->recs.push_back(Rectangle(0, 0, width/7, height/7, 0, color));
+	this->relpos.push_back(glm::vec3(2*width/14, -4*height/14, 0));
+	
+	this->recs.push_back(Rectangle(0, 0, width/7, height/7, 0, color));
+	this->relpos.push_back(glm::vec3(2*width/14, 2*height/14, 0));
+
+	this->recs.push_back(Rectangle(0, 0, width/7, height/7, 0, color));
+	this->relpos.push_back(glm::vec3(2*width/14, -2*height/14, 0));
+
+	this->recs.push_back(Rectangle(0, 0, width/7, height/7, 0, color));
+	this->relpos.push_back(glm::vec3(2*width/14, -0*height/14, 0));
+	
+	this->recs.push_back(Rectangle(0, 0, width/7, height/7, 0, color));
+	this->relpos.push_back(glm::vec3(2*width/14, -4*height/14, 0));
+
+	this->recs.push_back(Rectangle(0, 0, width/7, height/7, 0, color));
+	this->relpos.push_back(glm::vec3(4*width/14, 2*height/14, 0));
+	
+	this->recs.push_back(Rectangle(0, 0, width/7, height/7, 0, color));
+	this->relpos.push_back(glm::vec3(4*width/14, -2*height/14, 0));
+
+	this->recs.push_back(Rectangle(0, 0, width/7, height/7, 0, color));
+	this->relpos.push_back(glm::vec3(4*width/14, 0*height/14, 0));
+}
+
+
 
 WaterBalloon::WaterBalloon(float x, float y, float width, float height, float mass, color_t color) : Sprite(x, y, width, height, 0, color) {
 	this->mass = mass;
@@ -595,4 +765,33 @@ void Semicircle::draw(glm::mat4 VP){
     glm::mat4 MVP = VP * Matrices.model;
     glUniformMatrix4fv(Matrices.MatrixID, 1, GL_FALSE, &MVP[0][0]);
     draw3DObject(this->object);
+}
+
+Firebeamconfusion::Firebeamconfusion(float x, float y, float width, float height, color_t color) : Sprite(x, y, width, height, 0, color) {
+	this->start = std::clock();
+	this->position = glm::vec3(x, y, 0);
+	// this->speed = 0.015f;
+	this->recs.push_back(Rectangle(0,0,0,0.25f,0,COLOR_FIRERED));
+	this->relpos.push_back(glm::vec3(0,3*vertical_float,0));
+	this->recs.push_back(Rectangle(0,0,0.5f,0.5f,M_PI/4,COLOR_FIREYELLOW));
+	this->relpos.push_back(glm::vec3(-width/2,0,0));	
+	this->recs.push_back(Rectangle(0,0,0.5f,0.5f,M_PI/4,COLOR_FIREYELLOW));
+	this->relpos.push_back(glm::vec3(width/2,0,0));
+}
+
+void Firebeamconfusion::tick(Player &player) {
+	this->position.x = player.position.x;
+	float tme = (std::clock() - this->start)/(float)CLOCKS_PER_SEC;
+	if( tme < 8.0f && tme > 4.0f) {
+		this->recs[0] = Rectangle(0,0,this->width*(tme-4.0f)/4.0f,0.25f,0,COLOR_FIRERED);
+		this->relpos[0].y = 0;
+		std::cout << this->position.x - this->recs[0].width/2 << " " << this->position.y << std::endl;
+	}
+	if(tme > 4.0f) {
+		add_jetflares(jetflare_list,this->position.x - this->recs[0].width/2, this->position.y);
+		add_jetflares(jetflare_list,this->position.x + this->recs[0].width/2, this->position.y);
+	}
+	for(int i = 0 ; i < this->recs.size() ; ++i) {
+		this->recs[i].position = this->relpos[i] + this->position;
+	}
 }
