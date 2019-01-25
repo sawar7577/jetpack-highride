@@ -1,12 +1,6 @@
 #include "main.h"
 #include "timer.h"
 #include "ball.h"
-// #include "lists.h"
-// #include "collision.h"
-
-// #include "lists.h"
-#include <iostream>
-#include <iomanip>      // std::setprecision
 using namespace std;
 
 GLMatrices Matrices;
@@ -20,9 +14,11 @@ GLFWwindow *window;
 Player playa;
 Floor level;
 Magnet mag;
-Numbers num;
+vector <string> hsh;
+vector <Numbers> score;
 CooldownBar cl;
 Viserion vs;
+Ring r;
 int flag;
 
 
@@ -79,8 +75,8 @@ template <typename Type> void tick_sprites(list <Type> &l) {
     }
 }
 
-void tick_magnet(list <Magnet> &l, Player &player) {
-    list <Magnet> :: iterator it;
+template <typename Type> void tick_sprite_player(list <Type> &l, Player &player) {
+    typename list <Type> :: iterator it;
     for(it = l.begin() ; it != l.end() ; ++it) {
         (*it).tick(player);
     }
@@ -95,15 +91,69 @@ void magnet_response(list <Magnet> &l, Player &player) {
     }
 }
 
+
+void add_steam(list <Steam> &l, float x, float y, float width) {
+	for(float i = x - width/2 ; i < x + width/2 ; i+=0.1f) {
+		unsigned long ret = xorshf96();
+		if(ret%1 == 0) {
+			l.push_back(Steam(i, y, 0.075, 0.2f, 10.0f, COLOR_BLACK));
+		}
+	}
+}
+
+template <typename Type1, typename Type2> void balloonfire_response(list <Type1> &firelist, list <Type2> &balloonlist) {
+    typename list <Type1> :: iterator it = firelist.begin();
+    typename list <Type2> :: iterator it2 = balloonlist.begin();
+     
+    for(it = firelist.begin() ; it!=firelist.end() ;it++) {
+        for(it2 = balloonlist.begin() ; it2!=balloonlist.end() ;){
+            if(collision_checker((*it),(*it2))){
+                add_steam(steam_list, (*it).position.x, (*it).position.y, (*it).width);
+                firelist.erase(it++);
+                balloonlist.erase(it2++);
+            }
+            else{
+                it2++;
+            }
+        }
+    }
+}
+
+template <typename Type> void coin_response(list <Type> &l, Player &player) {
+    typename list <Type> :: iterator it = l.begin();
+    while(it != l.end()) {
+        if(collision_checker((*it),player)) {
+            l.erase(it++);
+            player.score++;
+        }
+        else {
+            it++;
+        }
+    }
+}
+
 template <typename Type> void remove_balloons(list <Type> &l) {
-    float top    = screen_center_y + vertical_float / screen_zoom;
-    float bottom = screen_center_y - vertical_float / screen_zoom;
-    float left   = screen_center_x - horizontal_float / screen_zoom;
-    float right  = screen_center_x + horizontal_float / screen_zoom;
-    // std::cout << l.size() << std::endl;
+    float top    =+ vertical_float / screen_zoom;
+    float bottom =- vertical_float / screen_zoom;
     typename list <Type> :: iterator it = l.begin();
     while(it != l.end()) {
         if((*it).position.y < bottom) {
+            l.erase(it++);
+        }
+        else {
+            it++;
+        }
+    }
+}
+
+template <typename Type> void remove_beyondbounds(list <Type> &l) {
+    float apratio = 1280.0/720.0;
+    float left   = screen_center_x - 8*horizontal_float*apratio;
+    float right  = screen_center_x + 8*horizontal_float*apratio;
+    
+    typename list <Type> :: iterator it = l.begin();
+    while(it != l.end()) {
+        if((*it).position.x < left || (*it).position.x > right) {
             l.erase(it++);
         }
         else {
@@ -124,6 +174,45 @@ void remove_flares(list <Jetflare> &l) {
     }
 }
 
+void ring_response(list <Ring> &l, Player &player) {
+    list <Ring> :: iterator it;
+    for(it = l.begin() ; it!=l.end() ; ++it) {
+        std::cout << std::setprecision(1);
+        std::cout << (*it).position.x << " " << (*it).position.y << std::endl;
+        std::cout << (*it).recs[0].position.x << " " << (*it).recs[0].position.y << " " << player.position.x << " " << player.position.y << std::endl;
+        if(collision_checker((*it),player) && !(*it).activated){
+            (*it).activated = true;
+            (*it).rotation = M_PI;
+        }
+    }
+}
+
+
+
+float cam_y = 0;
+void setscore(int pscore, float x) {
+    score.clear();
+    for(int i = 0 ; pscore!=0 ; ++i){
+        float posy;
+        if(screen_zoom > 1){
+            posy = cam_y + playa.height;
+        }
+        else{
+            posy = vertical_float - vertical_float/10;
+        }
+        
+        score.push_back(Numbers(x - i * 0.35f, posy, 0.25f, 0.5f, hsh[pscore%10], COLOR_BLACK));
+        score[i].tick();
+        pscore /= 10;
+    }
+}
+
+void draw_score(glm::mat4 VP){
+    for(int i = 0 ; i < score.size(); ++ i) {
+        score[i].draw(VP);
+    }
+}
+
 float screen_zoom = 1, screen_center_x = 0, screen_center_y = 0, vertical_float = 4, horizontal_float  = 4;
 float camera_rotation_angle = 0;
 
@@ -140,11 +229,10 @@ void draw(GLFWwindow *window) {
     glUseProgram (programID);
 
     // Eye - Location of camera. Don't change unless you are sure!!
-    // glm::vec3 eye ( 5*cos(camera_rotation_angle*M_PI/180.0f), 0, 5*sin(camera_rotation_angle*M_PI/180.0f) );
-    glm::vec3 eye (screen_center_x, 0, 2 );
+    glm::vec3 eye (screen_center_x, cam_y, 2 );
     
     // Target - Where is the camera looking at.  Don't change unless you are sure!!
-    glm::vec3 target (screen_center_x, 0, 0);
+    glm::vec3 target (screen_center_x, cam_y, 0);
     // Up - Up vector defines tilt of camera.  Don't change unless you are sure!!
     glm::vec3 up (0, 1, 0);
 
@@ -171,38 +259,75 @@ void draw(GLFWwindow *window) {
     draw_sprites(waterballoon_list, VP);
     draw_sprites(magnet_list, VP);
     draw_sprites(jetflare_list, VP);
-    num.draw(VP);
+    draw_sprites(steam_list, VP);
+    draw_sprites(iceball_list, VP);
+    draw_sprites(ring_list, VP);
+    draw_score(VP);
+    
     playa.draw(VP);
     cl.draw(VP);
     vs.draw(VP);
-    // b.draw(VP);
 
     level.draw(VP, target.x);
-
 }
 
 void tick_input(GLFWwindow *window) {
-    int left  = glfwGetKey(window, GLFW_KEY_LEFT);
-    int right = glfwGetKey(window, GLFW_KEY_RIGHT);
-    if (left) {
-        // Do something
+    int in  = glfwGetKey(window, GLFW_KEY_I);
+    int out = glfwGetKey(window, GLFW_KEY_O);
+    if (in) {
+        screen_zoom += 0.1f;
     }
+    if(out) {
+        screen_zoom -= 0.1f;
+    }
+
+    if(screen_zoom > 1){
+        cam_y = playa.position.y;
+    }
+    else {
+        cam_y = 0;
+    }
+    screen_center_x = playa.position.x;
+    // reset_screen();
+    reshapeWindow (window, 1280, 720);
+
 }
 
 void tick_elements(GLFWwindow *window) {
+    //tick sprites
     tick_sprites(ball_list);
     tick_sprites(firebeam_list);    
     tick_sprites(boomerang_list);
     tick_sprites(powerup_list);
     tick_sprites(waterballoon_list);
     tick_sprites(jetflare_list);
-    tick_magnet(magnet_list,playa);
+    // tick_sprite_player(magnet_list,playa);
+    tick_sprite_player(ring_list,playa);
+    tick_sprites(steam_list);
+    tick_sprites(iceball_list);
+    playa.tick(window);
+
+    //response of sprites
     magnet_response(magnet_list,playa);
+    balloonfire_response(firebeam_list, waterballoon_list);
+    balloonfire_response(fireline_list, waterballoon_list);
+    coin_response(ball_list, playa);
+    ring_response(ring_list, playa);
+    
+    
     remove_balloons(waterballoon_list);
     remove_flares(jetflare_list);
-    playa.tick(window);
+    
+   //remove out of scene objects
+    remove_beyondbounds(fireline_list);
+    remove_beyondbounds(firebeam_list);
+    remove_beyondbounds(waterballoon_list);
+    remove_beyondbounds(magnet_list);
+    remove_beyondbounds(boomerang_list);
+    remove_beyondbounds(ball_list);
+
+    setscore(playa.score, screen_center_x);
     cl.tick((std::clock() - playa.cooldown)/(double)CLOCKS_PER_SEC);
-    num.tick();
     vs.tick();
     // camera_rotation_angle += 1;
 }
@@ -212,14 +337,22 @@ void tick_elements(GLFWwindow *window) {
 void initGL(GLFWwindow *window, int width, int height) {
     /* Objects should be created before any other gl function and shaders */
     // Create the models
-
-    // ball1       = Ball(2.0f, 0, COLOR_RED);
-    // ball2       = Ball(-2.0f, 0, COLOR_GREEN);
     playa       = Player(screen_center_x, screen_center_y, 0.75f, 1.15f, 2.0f, COLOR_BLACK);
     level       = Floor(-10.0f, -4.0f);
-    num         = Numbers(-2.0f, 2.0f, 0.5f, 1.0f, "1111110",COLOR_BLACK);
-    cl          = CooldownBar(-3.0f, -1.0f, 10.0f, 1.0f, COLOR_BLACK);
-    vs          = Viserion(-10.0f, -1.0f, 1.0f, 1.0f, COLOR_BLACK);
+    r           = Ring(0.0f,-2.0f,4.0f,0.5f,COLOR_RED);
+    ring_list.push_back(r);
+    hsh.push_back("1011111");
+    hsh.push_back("0000101");
+    hsh.push_back("1111001");
+    hsh.push_back("1110101");
+    hsh.push_back("0100111");
+    hsh.push_back("1110110");
+    hsh.push_back("1111110");
+    hsh.push_back("0010101");    
+    hsh.push_back("1111111");
+    hsh.push_back("1110111");
+    cl          = CooldownBar(-3.0f, vertical_float - vertical_float/60, 2*1280*horizontal_float/(screen_zoom*720), vertical_float/30, COLOR_BLACK);
+    vs          = Viserion(screen_center_x, 3.0f, 2.0f, 2.0f, COLOR_BLACK);
     magnet_list.push_back(Magnet(2.0f, 2.0f, 1.0f, 1.0f, COLOR_BLACK));
     boomerang_list.push_back(Boomerang(6.0f,-1.0f,0.0f,0.0f,1.0f,1.0f,COLOR_BLACK));
     firebeam_list.push_back(Firebeam(6.0f,2.0f,2.0f,0,COLOR_GREEN));
@@ -262,20 +395,17 @@ int main(int argc, char **argv) {
     int loop = 1;
     while (!glfwWindowShouldClose(window)) {
         // Process timers
-        
-     
         if (t60.processTick()) {
             // 60 fps
             // OpenGL Draw commands
            
-            draw(window);
             // Swap Frame Buffer in double buffering
             glfwSwapBuffers(window);
 
             tick_elements(window);
             tick_input(window);
+            draw(window);
         }
-
         // Poll for Keyboard and mouse events
         glfwPollEvents();
     }
@@ -288,14 +418,11 @@ bool detect_collision(bounding_box_t a, bounding_box_t b) {
            (abs(a.y - b.y) * 2 < (a.height + b.height));
 }
 
-
-
 void reset_screen() {
-    float top    = screen_center_y + vertical_float / screen_zoom;
-    float bottom = screen_center_y - vertical_float / screen_zoom;
-    float left   = screen_center_x - horizontal_float / screen_zoom;
-    float right  = screen_center_x + horizontal_float / screen_zoom;
+    float top    =  + vertical_float / screen_zoom;
+    float bottom =  - vertical_float / screen_zoom;
+    float left   =  - horizontal_float / screen_zoom;
+    float right  =  + horizontal_float / screen_zoom;
     float apratio = 1280.0/720.0; 
-    Matrices.projection = glm::ortho(left*apratio, right*apratio, bottom, top, 0.1f, 500.0f);
+    Matrices.projection = glm::ortho(left*apratio, right*apratio, bottom, top, 0.0f, 500.0f);
 }
-

@@ -81,6 +81,7 @@ class Ball : public Sprite {
 
 class Player : public Sprite {
     public:
+        int score;
         float mass;
         clock_t cooldown;
         glm::vec3 momentum;
@@ -108,6 +109,8 @@ class Magnet : public Sprite {
 
 class Viserion : public Sprite {
     public:
+        glm::vec3 momentum;
+        float mass;
         Viserion() {}
         Viserion(float x, float y, float width, float height, color_t color);
         void tick();
@@ -175,6 +178,29 @@ class CooldownBar : public Sprite {
         void tick(float tme);
 };
 
+class Semicircle {
+    public:
+        float radius;
+        glm::vec3 position;
+        Semicircle() {}
+        Semicircle(float x, float y, float radius, color_t color);
+        void draw(glm::mat4 VP);
+    private:
+        VAO *object;
+};
+
+class Ring : public Sprite {
+    public:
+        float radius;
+        float thick;
+        bool activated;
+        vector <Semicircle> semis;
+        Ring() {}
+        Ring(float x, float y, float radius, float thick, color_t color);
+        void tick(Player &player);
+        void draw(glm::mat4 VP);
+};
+
 
 extern list <Ball> ball_list;
 extern list <Firebeam> firebeam_list;
@@ -186,6 +212,10 @@ extern list <Magnet> magnet_list;
 extern list <Jetflare> jetflare_list;
 extern list <Steam> steam_list;
 extern list <Iceball> iceball_list;
+extern list <Ring> ring_list;
+extern list <Viserion> viserion_list;
+
+
 
 
 
