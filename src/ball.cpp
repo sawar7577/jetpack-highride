@@ -45,7 +45,6 @@ void add_jetflares(list <Jetflare> &l, float x, float y) {
 void add_iceballs(list <Iceball> &l, float x, float y) {
 	unsigned long ret = xorshf96();
 	if(ret%100 == 0) {
-		std::cout << "here   " << std::endl;
 		l.push_back(Iceball(x,y, 0.5f, 0.5f, 1.0f, COLOR_BLACK));
 	}
 }
@@ -57,6 +56,7 @@ Sprite::Sprite(float x, float y, float width, float height, float rotation, colo
 	this->height = height;
 	this->rotation = rotation;
 	this->color = color;
+	this->broad_phase.push_back(Rectangle(x, y, width, height, rotation, color));
 }
 
 void Sprite::draw(glm::mat4 VP) {
@@ -78,6 +78,15 @@ void Sprite::destroy() {
 	}
 }
 
+void Sprite::tick() {
+	for(int i = 0 ; i < this->recs.size() ; ++i) {
+		this->recs[i].position = this->position + this->relpos[i];
+	}
+	for(int i = 0 ; i < this->broad_phase.size() ; ++i) {
+		this->broad_phase[i].position = this->position;
+	}
+}
+
 Ball::Ball(float x, float y, color_t color) : Sprite(x, y , 0.25, 0.25, M_PI/4, COLOR_FIREYELLOW){
 	this->recs.push_back(Rectangle(x, y, 0.25f, 0.25f, M_PI/4, COLOR_FIREYELLOW));
 }
@@ -89,10 +98,12 @@ void Ball::tick() {
 Player::Player(float x, float y, float width, float height, float mass, color_t color):Sprite(x,y,width,height,0,color) {
 	this->mass = mass;
 	this->score = 0;
+	this->speedy = 0.0036f;
 	this->momentum = glm::vec3(0, 0, 0);
 	this->cooldown = std::clock();
 	this->inv = -5.0f;
 	this->invincibility = false;
+	this->lives = 5;
 	this->recs.push_back(Rectangle(x+width/2-width/3,y-height/10,2*width/3,height/2,0,COLOR_GREEN));
 	this->relpos.push_back(glm::vec3(width/2-width/3,-height/10,0));
 	this->recs.push_back(Rectangle(x-width/2+width/6,y,width/3,height/3,0,COLOR_RED));
@@ -117,18 +128,18 @@ void Player::tick(GLFWwindow *window) {
 
     this->momentum.x += (this->momentum.x*(-0.01f));
     	if(glfwGetKey(window,GLFW_KEY_LEFT)){
-        this->momentum.x -= 0.0036f;
+        this->momentum.x -= this->speedy;
     }
     if(glfwGetKey(window,GLFW_KEY_RIGHT)){
-        this->momentum.x += 0.0036f;
+        this->momentum.x += this->speedy;
 		add_coin(ball_list);
     }
     if(glfwGetKey(window,GLFW_KEY_UP)){
 		add_jetflares(jetflare_list, this->position.x - this->width/2, this->position.y);
-        this->momentum.y += 0.0036f;
+        this->momentum.y += this->speedy;
     }
     if(glfwGetKey(window,GLFW_KEY_DOWN)){
-        this->momentum.y -= 0.0036f;
+        this->momentum.y -= this->speedy;
     }
 	if(glfwGetKey(window,GLFW_KEY_SPACE)){
 		clock_t now = std::clock();
@@ -179,8 +190,6 @@ void Rectangle::draw(glm::mat4 VP) {
     Matrices.model = glm::mat4(1.0f);
     glm::mat4 translate = glm::translate (this->position);    // glTranslatef
     glm::mat4 rotate    = glm::rotate((float) (this->rotation), glm::vec3(0, 0, 1));
-	// No need as coords centered at 0, 0, 0 of cube arouund which we waant to rotate
-    // rotate          = rotate * glm::translate(glm::vec3(0, -0.6, 0));
     Matrices.model *= (translate * rotate);
     glm::mat4 MVP = VP * Matrices.model;
     glUniformMatrix4fv(Matrices.MatrixID, 1, GL_FALSE, &MVP[0][0]);
@@ -286,7 +295,6 @@ void Firebeam::tick() {
 		this->position.y = bottom;
 		this->speed *= -1;
 	}
-
 	for(int i = 0 ; i < this->recs.size() ; ++i) {
 		this->recs[i].position = this->position + this->relpos[i];
 	}
@@ -324,14 +332,14 @@ void Boomerang::tick() {
 
 Powerup::Powerup(float x, float y, float width, float height, float mass, color_t color) : Sprite(x, y, width, height, 0, color) {
 	this->mass = mass;
-	this->momentum = glm::vec3(-0.1f,0,0);
+	this->momentum = glm::vec3(-0.01f,0,0);
 }
 
 void Powerup::tick() {
 	float top    = screen_center_y + vertical_float / 1;
     float bottom = screen_center_y - 9*vertical_float / (1*10);
 	
-	this->momentum.y -= 0.000125f;
+	this->momentum.y -= 0.00125f;
     this->position += this->momentum / this->mass;
 	if(this->position.y - this->height/2 < bottom){
 		this->momentum.y *= (-1);
@@ -341,9 +349,7 @@ void Powerup::tick() {
 		this->momentum.y *= (-1);
 		this->position.y = top - this->height/2;
 	}
-	for(int i = 0 ; i < recs.size() ; ++i) {
-		this->recs[i].position = this->position + this->relpos[i];
-	}
+	Sprite::tick();
 
 }
 
@@ -378,37 +384,42 @@ Sword::Sword(float x, float y, float width, float height, float mass, color_t co
 }
 
 void Sword::action(Player &player) {
-	player.invincibility = std::clock();
+	player.inv = std::clock();
+	player.invincibility = true; 
 }
 
 Bolt::Bolt(float x, float y, float width, float height, float mass, color_t color) : Powerup(x, y, width, height, mass, color) {
 	
-	this->recs.push_back(Rectangle(0, 0, width/12, height/7, 0, COLOR_SILVER));
-	this->relpos.push_back(glm::vec3(0, 6*height/14, 0));
-
-	this->recs.push_back(Rectangle(0, 0, width/7, height/7, 0, COLOR_SILVER));
-	this->relpos.push_back(glm::vec3(0, 4*height/14, 0));
-	
-	this->recs.push_back(Rectangle(0, 0, width/7, height/7, 0, COLOR_SILVER));
-	this->relpos.push_back(glm::vec3(0, 2*height/14, 0));
-
-	this->recs.push_back(Rectangle(0, 0, width/7, height/7, 0, COLOR_SILVER));
-	this->relpos.push_back(glm::vec3(0, 0, 0));
-
-	this->recs.push_back(Rectangle(0, 0, width/7, height/7, 0, COLOR_BLACK));
+	this->recs.push_back(Rectangle(0, 0, width/7, height/7, 0, COLOR_GREEN));
 	this->relpos.push_back(glm::vec3(0, -6*height/14, 0));
-
-	this->recs.push_back(Rectangle(0, 0, width/7, height/7, 0, COLOR_BLACK));
-	this->relpos.push_back(glm::vec3(0, -4*height/14, 0));
 	
+	this->recs.push_back(Rectangle(0, 0, width/7, height/7, 0, COLOR_GREEN));
+	this->relpos.push_back(glm::vec3(0, -4*height/14, 0));
+
 	this->recs.push_back(Rectangle(0, 0, width/7, height/7, 0, COLOR_SILVER));
 	this->relpos.push_back(glm::vec3(0, -2*height/14, 0));
 
-	this->recs.push_back(Rectangle(0, 0, width/7, height/7, 0, COLOR_BLACK));
-	this->relpos.push_back(glm::vec3(-2*width/14, -4*height/14, 0));
+	this->recs.push_back(Rectangle(0, 0, width/7, height/7, 0, COLOR_SILVER));
+	this->relpos.push_back(glm::vec3(2*width/14, -2*height/14, 0));
 
 	this->recs.push_back(Rectangle(0, 0, width/7, height/7, 0, COLOR_BLACK));
-	this->relpos.push_back(glm::vec3(2*width/14, -4*height/14, 0));
+	this->relpos.push_back(glm::vec3(2*width/14, 0, 0));
+
+	this->recs.push_back(Rectangle(0, 0, width/7, height/7, 0, COLOR_BLACK));
+	this->relpos.push_back(glm::vec3(2*width/14, 2*height/14, 0));
+	
+	this->recs.push_back(Rectangle(0, 0, width/7, height/7, 0, COLOR_SILVER));
+	this->relpos.push_back(glm::vec3(4*width/14, 2*height/14, 0));
+
+	this->recs.push_back(Rectangle(0, 0, width/7, height/7, 0, COLOR_SILVER));
+	this->relpos.push_back(glm::vec3(4*width/14, 4*height/14, 0));
+
+	this->recs.push_back(Rectangle(0, 0, width/7, height/7, 0, COLOR_SILVER));
+	this->relpos.push_back(glm::vec3(4*width/14, 6*height/14, 0));
+}
+
+void Bolt::action(Player &player){
+	player.speedy += 0.001f;
 }
 
 
@@ -488,6 +499,9 @@ Heart::Heart(float x, float y, float width, float height, float mass, color_t co
 	this->relpos.push_back(glm::vec3(4*width/14, 0*height/14, 0));
 }
 
+void Heart::action(Player &player) {
+	player.lives++;
+}
 
 
 WaterBalloon::WaterBalloon(float x, float y, float width, float height, float mass, color_t color) : Sprite(x, y, width, height, 0, color) {
@@ -505,9 +519,8 @@ void WaterBalloon::tick() {
 
 	this->momentum.y -= 0.00125f;
     this->position += this->momentum / this->mass;
-	for(int i = 0 ; i < recs.size() ; ++i) {
-		this->recs[i].position = this->position + this->relpos[i];
-	}
+
+	Sprite::tick();
 }
 
 Viserion::Viserion(float x, float y, float width, float height, color_t color) : Sprite(x, y, width, height, 0, color) {
@@ -567,13 +580,9 @@ void Viserion::tick() {
 		this->momentum.y *= (-1);
 		this->position.y = top - this->height/2;
 	}
-	for(int i = 0 ; i < recs.size() ; ++i) {
-		this->recs[i].position = this->position + this->relpos[i];
-	}
 
-	for(int i = 0 ; i < this->recs.size() ; ++i) {
-		this->recs[i].position = this->position + this->relpos[i];
-	}
+	Sprite::tick();
+
 	add_iceballs(iceball_list, this->position.x, this->position.y);
 }
 
@@ -592,13 +601,14 @@ void Iceball::tick() {
 
 	this->momentum.y -= 0.00125f;
     this->position += this->momentum / this->mass;
-	for(int i = 0 ; i < recs.size() ; ++i) {
-		this->recs[i].position = this->position + this->relpos[i];
+	for(int i = 0 ; i < this->recs.size() ; ++i) {
 		if(xorshf96()%2 == 0)
 			this->recs[i].rotation += 0.1f;
 		else
 			this->recs[i].rotation -= 0.1f;
-	}	
+	}
+	Sprite::tick();
+
 }
 
 Jetflare::Jetflare(float x, float y, float width, float height, float mass, color_t color) : Sprite(x, y, width, height, 0, color) {
@@ -607,12 +617,12 @@ Jetflare::Jetflare(float x, float y, float width, float height, float mass, colo
 	this->momentum = glm::vec3( sin ( M_PI/(64*(1+(xorshf96())%7) )) ,-0.4f,0);
 	this->start = std::clock();
 	this->recs.push_back(Rectangle(x, y, width, height, 0, color));
+	this->relpos.push_back(glm::vec3(0,0,0));
 }
 
 void Jetflare::tick() {
-	for(int i = 0 ; i < this->recs.size() ; ++i) {
-		this->recs[i].position += this->momentum / this->mass;
-	}
+	this->position += this->momentum / this->mass;
+	Sprite::tick();
 }
 
 Steam::Steam(float x, float y, float width, float height, float mass, color_t color) : Sprite(x, y, width, height, 0, color) {
@@ -620,12 +630,12 @@ Steam::Steam(float x, float y, float width, float height, float mass, color_t co
 	this->momentum = glm::vec3( sin ( M_PI/(64*(1+(xorshf96())%7) )) ,0.4f*sin( M_PI/(2*(1+(xorshf96())%7) )),0);
 	this->start = std::clock();
 	this->recs.push_back(Rectangle(x, y, width, height, 0, color));
+	this->relpos.push_back(glm::vec3(0,0,0));
 }
 
 void Steam::tick() {
-	for(int i = 0 ; i < this->recs.size() ; ++i) {
-		this->recs[i].position += this->momentum / this->mass;
-	}
+	this->position += this->momentum / this->mass;
+	Sprite::tick();
 }
 
 Numbers::Numbers(float x, float y, float width, float height, string hash, color_t color) {
@@ -662,9 +672,7 @@ Numbers::Numbers(float x, float y, float width, float height, string hash, color
 }
 
 void Numbers::tick() {
-	for(int i = 0 ; i < this->recs.size() ; ++i) {
-		this->recs[i].position = this->position + this->relpos[i];
-	}
+	Sprite::tick();
 }
 
 CooldownBar::CooldownBar(float x, float y, float width, float height, color_t color) : Sprite(x, y, width, height, 0, color) {
@@ -683,9 +691,7 @@ void CooldownBar::tick(float tme) {
 	this->relpos.push_back(glm::vec3(this->width/2 - w/2,0,0));
 	this->position.x = screen_center_x;
 
-	for(int i = 0 ; i < this->recs.size() ; ++i) {
-		this->recs[i].position = this->position + this->relpos[i];
-	}
+	Sprite::tick();
 }
 
 Ring::Ring(float x, float y, float radius, float thick, color_t color) : Sprite(x, y, 0, 0, M_PI, color) {
@@ -700,16 +706,12 @@ Ring::Ring(float x, float y, float radius, float thick, color_t color) : Sprite(
 
 void Ring::tick(Player &player) {
 
-	for(int i = 0 ; i < this->recs.size() ; ++i) {
-		this->recs[i].position = this->position + this->relpos[i];
-	}
 	float xdiff = this->position.x-player.position.x;
 	float ydiff = this->position.y-player.position.y;
 
 	if(sqrt(xdiff*xdiff+ydiff*ydiff)  > this->radius + 0.1f) {
 		this->activated = false;
 	}
-	// this->rotation = atan(ydiff/xdiff);
 	if(this->rotation < 0) {
 		this->activated = false;
 		this->rotation = M_PI;
@@ -717,14 +719,10 @@ void Ring::tick(Player &player) {
 	}
 	if(this->activated == true) {
 		this->rotation -= 0.01f;
-		// std::cout << "activated" << std::endl;
 		player.position.x = this->position.x + this->radius * cos(this->rotation);
 		player.position.y = this->position.y + this->radius * sin(this->rotation);
-		// player.position.y = sqrt(abs(this->radius*this->radius-(player.position.x)*(player.position.x)));
 	}
-	for(int i = 0 ; i < this->recs.size() ; ++i) {
-		this->recs[i].position = this->position + this->relpos[i];
-	}
+	Sprite::tick();
 }
 
 void Ring::draw(glm::mat4 VP){
@@ -757,10 +755,7 @@ Semicircle::Semicircle(float x, float y, float radius, color_t color) {
 
 void Semicircle::draw(glm::mat4 VP){
 	Matrices.model = glm::mat4(1.0f);
-    glm::mat4 translate = glm::translate (this->position);    // glTranslatef
-    // glm::mat4 rotate    = glm::rotate((float) (this->rotation), glm::vec3(0, 0, 1));
-	// No need as coords centered at 0, 0, 0 of cube arouund which we waant to rotate
-    // rotate          = rotate * glm::translate(glm::vec3(0, -0.6, 0));
+    glm::mat4 translate = glm::translate (this->position);
     Matrices.model *= (translate);
     glm::mat4 MVP = VP * Matrices.model;
     glUniformMatrix4fv(Matrices.MatrixID, 1, GL_FALSE, &MVP[0][0]);
@@ -770,7 +765,6 @@ void Semicircle::draw(glm::mat4 VP){
 Firebeamconfusion::Firebeamconfusion(float x, float y, float width, float height, color_t color) : Sprite(x, y, width, height, 0, color) {
 	this->start = std::clock();
 	this->position = glm::vec3(x, y, 0);
-	// this->speed = 0.015f;
 	this->recs.push_back(Rectangle(0,0,0,0.25f,0,COLOR_FIRERED));
 	this->relpos.push_back(glm::vec3(0,3*vertical_float,0));
 	this->recs.push_back(Rectangle(0,0,0.5f,0.5f,M_PI/4,COLOR_FIREYELLOW));
@@ -791,7 +785,5 @@ void Firebeamconfusion::tick(Player &player) {
 		add_jetflares(jetflare_list,this->position.x - this->recs[0].width/2, this->position.y);
 		add_jetflares(jetflare_list,this->position.x + this->recs[0].width/2, this->position.y);
 	}
-	for(int i = 0 ; i < this->recs.size() ; ++i) {
-		this->recs[i].position = this->relpos[i] + this->position;
-	}
+	Sprite::tick();
 }

@@ -16,6 +16,8 @@ Floor level;
 Magnet mag;
 vector <string> hsh;
 vector <Numbers> score;
+vector <Numbers> lives;
+Heart lifeimage; 
 CooldownBar cl;
 Viserion vs;
 Ring r;
@@ -51,13 +53,15 @@ bool collision(Rectangle a, Rectangle b) {
 
 
 template <class Type1, class Type2> bool collision_checker(const Type1 &a, const Type2 &b) {
-    for(int i = 0 ; i < a.recs.size() ; ++i) {
-        for(int j = 0 ; j < b.recs.size() ; ++j) {
-            if(collision(a.recs[i] , b.recs[j])){
-                return true;
+    // if(collision(a.broad_phase[0], b.broad_phase[0])){
+        for(int i = 0 ; i < a.recs.size() ; ++i) {
+            for(int j = 0 ; j < b.recs.size() ; ++j) {
+                if(collision(a.recs[i] , b.recs[j])){
+                    return true;
+                }
             }
         }
-    }
+    // }
     return false;
 }
 
@@ -109,8 +113,6 @@ template <typename Type1, typename Type2> void balloonfire_response(list <Type1>
         for(it2 = balloonlist.begin() ; it2!=balloonlist.end() ;){
             if(collision_checker((*it),(*it2))){
                 add_steam(steam_list, (*it).position.x, (*it).position.y, (*it).width);
-                (*it).destroy();
-                (*it2).destroy();
                 firelist.erase(it++);
                 balloonlist.erase(it2++);
             }
@@ -179,17 +181,6 @@ template <typename Type> void remove_beyondbounds(list <Type> &l) {
     }
 }
 
-void remove_flares(list <Jetflare> &l) {
-    list <Jetflare> :: iterator it = l.begin();
-    while(it != l.end()) {
-        if( (std::clock() - (*it).start)/(double)CLOCKS_PER_SEC > 0.5f ) {
-            l.erase(it++);
-        }
-        else {
-            it++;
-        }
-    }
-}
 
 template <typename Type> void invincibility_state(list <Type> &l, Player &player) {
     typename list <Type> :: iterator it;
@@ -230,8 +221,8 @@ void ring_response(list <Ring> &l, Player &player) {
 
 
 float cam_y = 0;
-void setscore(int pscore, float x) {
-    score.clear();
+void setscore(vector <Numbers> &sc, int pscore, float x) {
+    sc.clear();
     for(int i = 0 ; pscore!=0 ; ++i){
         float posy;
         if(screen_zoom > 1){
@@ -241,15 +232,27 @@ void setscore(int pscore, float x) {
             posy = vertical_float - vertical_float/10;
         }
         
-        score.push_back(Numbers(x - i * 0.35f, posy, 0.25f, 0.5f, hsh[pscore%10], COLOR_BLACK));
-        score[i].tick();
+        sc.push_back(Numbers(x - i * 0.35f, posy, 0.25f, 0.5f, hsh[pscore%10], COLOR_BLACK));
+        sc[i].tick();
         pscore /= 10;
     }
 }
 
-void draw_score(glm::mat4 VP){
-    for(int i = 0 ; i < score.size(); ++ i) {
-        score[i].draw(VP);
+void draw_score(vector <Numbers> &sc, glm::mat4 VP){
+    for(int i = 0 ; i < sc.size(); ++ i) {
+        sc[i].draw(VP);
+    }
+}
+
+
+template <typename Type> void random_spawn(list <Type> &l, Rectangle bound_box, int probability) {
+    for(float i = 0.0f ; i < bound_box.width ; i += 0.5f) {
+        for(float j = 0.0f; j < bound_box.height; j += 0.5f) {
+            unsigned long ret = xorshf96();
+            if(ret%10000 > probability) {
+                l.push_back(Type(bound_box.position.x + i - bound_box.width/2, bound_box.position.y + j - bound_box.height/2));
+            }
+        }
     }
 }
 
@@ -291,6 +294,7 @@ void draw(GLFWwindow *window) {
     glm::mat4 MVP;  // MVP = Projection * View * Model
 
     // Scene render
+    draw_sprites(ring_list, VP);
     draw_sprites(ball_list, VP);
     draw_sprites(fireline_list, VP);    
     draw_sprites(firebeam_list, VP);
@@ -307,7 +311,10 @@ void draw(GLFWwindow *window) {
     draw_sprites(bolt_list, VP);
     draw_sprites(firebeamconfusion_list, VP);
     draw_sprites(viserion_list, VP);
-    draw_score(VP);
+    draw_score(score, VP);
+    draw_score(lives, VP);
+    // lifeimage.draw(VP);
+
     
     playa.draw(VP);
     cl.draw(VP);
@@ -318,11 +325,20 @@ void draw(GLFWwindow *window) {
 void tick_input(GLFWwindow *window) {
     int in  = glfwGetKey(window, GLFW_KEY_I);
     int out = glfwGetKey(window, GLFW_KEY_O);
+    int right = glfwGetKey(window, GLFW_KEY_RIGHT);
     if (in) {
         screen_zoom += 0.1f;
     }
     if(out) {
         screen_zoom -= 0.1f;
+    }
+    if(right) {
+        float apratio = 1280/720;
+        random_spawn(heart_list,Rectangle(screen_center_x + apratio*horizontal_float, screen_center_y, 1.0f, 2*vertical_float, 0.0f, COLOR_BLACK) ,9995);
+        random_spawn(sword_list, Rectangle(screen_center_x + apratio*horizontal_float, screen_center_y, 1.0f, 2*vertical_float, 0.0f, COLOR_BLACK),9995);
+        random_spawn(magnet_list, Rectangle(screen_center_x + apratio*horizontal_float, screen_center_y, 1.0f, 2*vertical_float, 0.0f, COLOR_BLACK), 9998);
+        random_spawn(heart_list, Rectangle(screen_center_x + apratio*horizontal_float, screen_center_y, 1.0f, 2*vertical_float, 0.0f, COLOR_BLACK), 9995);
+
     }
 
     if(screen_zoom > 1){
@@ -349,7 +365,7 @@ void tick_elements(GLFWwindow *window) {
     tick_sprites(waterballoon_list);
     tick_sprites(jetflare_list);
     tick_sprites(destroyed_list);
-    // tick_sprite_player(magnet_list,playa);
+    tick_sprite_player(magnet_list,playa);
     tick_sprite_player(firebeamconfusion_list,playa);
     tick_sprite_player(ring_list,playa);
     tick_sprites(steam_list);
@@ -373,6 +389,10 @@ void tick_elements(GLFWwindow *window) {
     //response of sprites
     magnet_response(magnet_list,playa);
     powerup_response(sword_list, playa);
+    powerup_response(bolt_list, playa);
+    powerup_response(heart_list, playa);
+
+
     // powerup_response(sword_list, playa);
     balloonfire_response(firebeam_list, waterballoon_list);
     balloonfire_response(fireline_list, waterballoon_list);
@@ -381,7 +401,6 @@ void tick_elements(GLFWwindow *window) {
     
     
     remove_balloons(waterballoon_list);
-    // remove_flares(jetflare_list);
     remove_with_time(jetflare_list, 0.5f);
     remove_with_time(destroyed_list, 2.5f);
     remove_with_time(firebeamconfusion_list, 10.f);
@@ -391,10 +410,13 @@ void tick_elements(GLFWwindow *window) {
     remove_beyondbounds(firebeam_list);
     remove_beyondbounds(waterballoon_list);
     remove_beyondbounds(magnet_list);
+    remove_beyondbounds(heart_list);
+    remove_beyondbounds(sword_list);
     remove_beyondbounds(boomerang_list);
     remove_beyondbounds(ball_list);
 
-    setscore(playa.score, screen_center_x);
+    setscore(score, playa.score, screen_center_x);
+    setscore(lives, playa.lives, screen_center_x + 1.0f);
     cl.tick((std::clock() - playa.cooldown)/(double)CLOCKS_PER_SEC);
     // camera_rotation_angle += 1;
 }
@@ -404,10 +426,8 @@ void tick_elements(GLFWwindow *window) {
 void initGL(GLFWwindow *window, int width, int height) {
     /* Objects should be created before any other gl function and shaders */
     // Create the models
-    playa       = Player(screen_center_x, screen_center_y, 0.75f, 1.15f, 2.0f, COLOR_BLACK);
-    level       = Floor(-10.0f, -4.0f);
-    r           = Ring(0.0f,-2.0f,4.0f,0.5f,COLOR_RED);
-    ring_list.push_back(r);
+    
+    //Hash values for seven segment
     hsh.push_back("1011111");
     hsh.push_back("0000101");
     hsh.push_back("1111001");
@@ -418,16 +438,27 @@ void initGL(GLFWwindow *window, int width, int height) {
     hsh.push_back("0010101");    
     hsh.push_back("1111111");
     hsh.push_back("1110111");
+
+
+    playa       = Player(screen_center_x, screen_center_y, 0.75f, 1.15f, 2.0f, COLOR_BLACK);
+    level       = Floor(-10.0f, -4.0f);
+    // lifeimage   = Heart(-4.0f, 4.0f, 1.0f, 1.0f, 1.0f, COLOR_FIRERED);
+    // lifeimage.tick();
     cl          = CooldownBar(-3.0f, vertical_float - vertical_float/60, 2*1280*horizontal_float/(screen_zoom*720), vertical_float/30, COLOR_BLACK);
-    viserion_list.push_back(Viserion(screen_center_x, 3.0f, 2.0f, 2.0f, COLOR_BLACK));
-    magnet_list.push_back(Magnet(2.0f, 2.0f, 1.0f, 1.0f, COLOR_BLACK));
     boomerang_list.push_back(Boomerang(6.0f,-1.0f,0.0f,0.0f,1.0f,1.0f,COLOR_BLACK));
     firebeam_list.push_back(Firebeam(6.0f,2.0f,2.0f,0,COLOR_GREEN));
     fireline_list.push_back(Fireline(4.0f,2.0f,2.0f,M_PI/3,COLOR_GREEN));
     fireline_list.push_back(Fireline(10.0f,2.0f,2.0f,M_PI/6,COLOR_GREEN));
     firebeamconfusion_list.push_back(Firebeamconfusion(-1.0f,-1.0f, 2*horizontal_float, 1.0f, COLOR_RED));
-    sword_list.push_back(Sword(2.0f, 2.0f, 1.0f, 1.0f, 1.0f, COLOR_FIRERED));
-    heart_list.push_back(Heart(-2.0f, 4.0f, 1.0f, 1.0f, 1.0f, COLOR_FIRERED));
+    
+    
+    ring_list.push_back(Ring(0.0f,-2.0f));
+    magnet_list.push_back(Magnet(2.0f, 2.0f));
+    viserion_list.push_back(Viserion(screen_center_x, 3.0f));
+    sword_list.push_back(Sword(2.0f, 2.0f));
+    heart_list.push_back(Heart(-2.0f, 4.0f));
+    bolt_list.push_back(Bolt(-4.0f, 4.0f));
+
     
     // Create and compile our GLSL program from the shaders
     

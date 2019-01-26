@@ -28,6 +28,7 @@ class Sprite {
     public:
         std::vector <Rectangle> recs;
         std::vector <glm::vec3> relpos;
+        std::vector <Rectangle> broad_phase;
         float width;
         float height;
         float rotation;
@@ -79,7 +80,9 @@ class Player : public Sprite {
     public:
         int score;
         float mass;
+        float speedy;
         bool invincibility;
+        int lives;
         clock_t inv;
         clock_t cooldown;
         glm::vec3 momentum;
@@ -108,7 +111,7 @@ class Floor : public Sprite {
 class Magnet : public Sprite {
     public:        
         Magnet() {}
-        Magnet(float x, float y, float width, float height, color_t color);
+        Magnet(float x, float y, float width = 1.0f, float height = 1.0f, color_t color = COLOR_BLACK);
         float force;
         void tick(Player &player);
 };
@@ -118,7 +121,7 @@ class Viserion : public Sprite {
         glm::vec3 momentum;
         float mass;
         Viserion() {}
-        Viserion(float x, float y, float width, float height, color_t color);
+        Viserion(float x, float y, float width = 2.0f, float height = 2.0f, color_t color = COLOR_BLACK);
         void tick();
 };
 
@@ -145,21 +148,21 @@ class Powerup : public Sprite {
 class Sword : public Powerup {
     public:
         Sword() {}
-        Sword(float x, float y, float width, float height, float mass, color_t color);
+        Sword(float x, float y, float width = 1.0f, float height = 1.0f, float mass = 1.0f, color_t color = COLOR_RED);
         void action(Player &player);
 };
 
 class Heart : public Powerup {
     public:
         Heart() {}
-        Heart(float x, float y, float width, float height, float mass, color_t color);
+        Heart(float x, float y, float width = 1.0f, float height = 1.0f, float mass = 1.0f, color_t color = COLOR_RED);
         void action(Player &player);
 };
 
 class Bolt : public Powerup {
     public:
         Bolt() {}
-        Bolt(float x, float y, float width, float height, float mass, color_t color);
+        Bolt(float x, float y, float width = 1.0f, float height = 1.0f, float mass = 1.0f, color_t color = COLOR_RED);
         void action(Player &player);
 };
 
@@ -224,7 +227,7 @@ class Ring : public Sprite {
         bool activated;
         vector <Semicircle> semis;
         Ring() {}
-        Ring(float x, float y, float radius, float thick, color_t color);
+        Ring(float x, float y, float radius = 4.0f, float thick = 0.5f, color_t color = COLOR_RED);
         void tick(Player &player);
         void draw(glm::mat4 VP);
 };
