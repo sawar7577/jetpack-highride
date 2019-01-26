@@ -150,6 +150,33 @@ src/ball.cpp.s:
 	$(MAKE) -f CMakeFiles/graphics_asgn1.dir/build.make CMakeFiles/graphics_asgn1.dir/src/ball.cpp.s
 .PHONY : src/ball.cpp.s
 
+src/collision.o: src/collision.cpp.o
+
+.PHONY : src/collision.o
+
+# target to build an object file
+src/collision.cpp.o:
+	$(MAKE) -f CMakeFiles/graphics_asgn1.dir/build.make CMakeFiles/graphics_asgn1.dir/src/collision.cpp.o
+.PHONY : src/collision.cpp.o
+
+src/collision.i: src/collision.cpp.i
+
+.PHONY : src/collision.i
+
+# target to preprocess a source file
+src/collision.cpp.i:
+	$(MAKE) -f CMakeFiles/graphics_asgn1.dir/build.make CMakeFiles/graphics_asgn1.dir/src/collision.cpp.i
+.PHONY : src/collision.cpp.i
+
+src/collision.s: src/collision.cpp.s
+
+.PHONY : src/collision.s
+
+# target to generate assembly for a file
+src/collision.cpp.s:
+	$(MAKE) -f CMakeFiles/graphics_asgn1.dir/build.make CMakeFiles/graphics_asgn1.dir/src/collision.cpp.s
+.PHONY : src/collision.cpp.s
+
 src/color.o: src/color.cpp.o
 
 .PHONY : src/color.o
@@ -203,6 +230,33 @@ src/input.s: src/input.cpp.s
 src/input.cpp.s:
 	$(MAKE) -f CMakeFiles/graphics_asgn1.dir/build.make CMakeFiles/graphics_asgn1.dir/src/input.cpp.s
 .PHONY : src/input.cpp.s
+
+src/lists.o: src/lists.cpp.o
+
+.PHONY : src/lists.o
+
+# target to build an object file
+src/lists.cpp.o:
+	$(MAKE) -f CMakeFiles/graphics_asgn1.dir/build.make CMakeFiles/graphics_asgn1.dir/src/lists.cpp.o
+.PHONY : src/lists.cpp.o
+
+src/lists.i: src/lists.cpp.i
+
+.PHONY : src/lists.i
+
+# target to preprocess a source file
+src/lists.cpp.i:
+	$(MAKE) -f CMakeFiles/graphics_asgn1.dir/build.make CMakeFiles/graphics_asgn1.dir/src/lists.cpp.i
+.PHONY : src/lists.cpp.i
+
+src/lists.s: src/lists.cpp.s
+
+.PHONY : src/lists.s
+
+# target to generate assembly for a file
+src/lists.cpp.s:
+	$(MAKE) -f CMakeFiles/graphics_asgn1.dir/build.make CMakeFiles/graphics_asgn1.dir/src/lists.cpp.s
+.PHONY : src/lists.cpp.s
 
 src/main.o: src/main.cpp.o
 
@@ -324,12 +378,18 @@ help:
 	@echo "... src/ball.o"
 	@echo "... src/ball.i"
 	@echo "... src/ball.s"
+	@echo "... src/collision.o"
+	@echo "... src/collision.i"
+	@echo "... src/collision.s"
 	@echo "... src/color.o"
 	@echo "... src/color.i"
 	@echo "... src/color.s"
 	@echo "... src/input.o"
 	@echo "... src/input.i"
 	@echo "... src/input.s"
+	@echo "... src/lists.o"
+	@echo "... src/lists.i"
+	@echo "... src/lists.s"
 	@echo "... src/main.o"
 	@echo "... src/main.i"
 	@echo "... src/main.s"

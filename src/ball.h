@@ -68,14 +68,6 @@ class Firebeam : public Sprite {
 };
 
 
-class Ball : public Sprite {
-    public:
-        Ball() {}
-        Ball(float x, float y, color_t color);
-        void tick();
-};
-
-
 class Player : public Sprite {
     public:
         int score;
@@ -90,6 +82,16 @@ class Player : public Sprite {
         Player(float x, float y, float width, float height, float mass, color_t color);
         void tick(GLFWwindow *window);
 };
+
+class Ball : public Sprite {
+    public:
+        int points;
+        Ball() {}
+        Ball(float x, float y, color_t color);
+        void tick();
+        void action(Player &player);
+};
+
 
 class Firebeamconfusion : public Sprite {
     public:

@@ -20,7 +20,7 @@ vector <Numbers> lives;
 Heart lifeimage; 
 CooldownBar cl;
 Viserion vs;
-Ring r;
+color_t clr[5];
 int flag;
 
 
@@ -53,7 +53,7 @@ bool collision(Rectangle a, Rectangle b) {
 
 
 template <class Type1, class Type2> bool collision_checker(const Type1 &a, const Type2 &b) {
-    // if(collision(a.broad_phase[0], b.broad_phase[0])){
+    if( a.broad_phase.size() && b.broad_phase.size() && collision(a.broad_phase[0], b.broad_phase[0])){
         for(int i = 0 ; i < a.recs.size() ; ++i) {
             for(int j = 0 ; j < b.recs.size() ; ++j) {
                 if(collision(a.recs[i] , b.recs[j])){
@@ -61,13 +61,16 @@ template <class Type1, class Type2> bool collision_checker(const Type1 &a, const
                 }
             }
         }
-    // }
+    }
     return false;
 }
 
 template <typename Type> void draw_sprites(list <Type> &l, glm::mat4 VP) {
     typename list <Type>::iterator it;
+    float apratio = 1280.0f/720.0f;
     for(it = l.begin() ; it != l.end() ; ++it) {
+        if( (*it).position.x > (screen_center_x - horizontal_float*apratio) 
+            && (*it).position.x < (screen_center_x + horizontal_float*apratio))
         (*it).draw(VP);
     }
 }
@@ -124,19 +127,6 @@ template <typename Type1, typename Type2> void balloonfire_response(list <Type1>
 }
 
 
-template <typename Type> void coin_response(list <Type> &l, Player &player) {
-    typename list <Type> :: iterator it = l.begin();
-    while(it != l.end()) {
-        if(collision_checker((*it),player)) {
-            l.erase(it++);
-            player.score++;
-        }
-        else {
-            it++;
-        }
-    }
-}
-
 template <typename Type> void powerup_response(list <Type> &l, Player &player) {
     typename list <Type> :: iterator it;
     for(it = l.begin() ; it!=l.end();){
@@ -150,29 +140,17 @@ template <typename Type> void powerup_response(list <Type> &l, Player &player) {
     }
 }
 
-
-template <typename Type> void remove_balloons(list <Type> &l) {
+template <typename Type> void remove_beyondbounds(list <Type> &l) {
+    float apratio = 1280.0f/720.0f;
+    float left   = screen_center_x - 1.5f*horizontal_float*apratio;
+    float right  = screen_center_x + 1.5f*horizontal_float*apratio;
     float top    =+ vertical_float / screen_zoom;
     float bottom =- vertical_float / screen_zoom;
-    typename list <Type> :: iterator it = l.begin();
-    while(it != l.end()) {
-        if((*it).position.y < bottom) {
-            l.erase(it++);
-        }
-        else {
-            it++;
-        }
-    }
-}
 
-template <typename Type> void remove_beyondbounds(list <Type> &l) {
-    float apratio = 1280.0/720.0;
-    float left   = screen_center_x - 8*horizontal_float*apratio;
-    float right  = screen_center_x + 8*horizontal_float*apratio;
-    
+
     typename list <Type> :: iterator it = l.begin();
     while(it != l.end()) {
-        if((*it).position.x < left || (*it).position.x > right) {
+        if((*it).position.x < left || (*it).position.x > right || (*it).position.y < bottom || (*it).position.y > top) {
             l.erase(it++);
         }
         else {
@@ -211,14 +189,14 @@ template <typename Type> void remove_with_time(list <Type> &l, float tme) {
 void ring_response(list <Ring> &l, Player &player) {
     list <Ring> :: iterator it;
     for(it = l.begin() ; it!=l.end() ; ++it) {
-        if(collision_checker((*it),player) && !(*it).activated){
+        float xdiff = player.position.x - (*it).position.x + (*it).radius;
+        float ydiff = player.position.y - (*it).position.y;
+        if(sqrt(xdiff*xdiff + ydiff*ydiff) < 0.3f && !(*it).activated){
             (*it).activated = true;
             (*it).rotation = M_PI;
         }
     }
 }
-
-
 
 float cam_y = 0;
 void setscore(vector <Numbers> &sc, int pscore, float x) {
@@ -230,8 +208,7 @@ void setscore(vector <Numbers> &sc, int pscore, float x) {
         }
         else{
             posy = vertical_float - vertical_float/10;
-        }
-        
+        }        
         sc.push_back(Numbers(x - i * 0.35f, posy, 0.25f, 0.5f, hsh[pscore%10], COLOR_BLACK));
         sc[i].tick();
         pscore /= 10;
@@ -243,7 +220,6 @@ void draw_score(vector <Numbers> &sc, glm::mat4 VP){
         sc[i].draw(VP);
     }
 }
-
 
 template <typename Type> void random_spawn(list <Type> &l, Rectangle bound_box, int probability) {
     for(float i = 0.0f ; i < bound_box.width ; i += 0.5f) {
@@ -314,8 +290,7 @@ void draw(GLFWwindow *window) {
     draw_score(score, VP);
     draw_score(lives, VP);
     // lifeimage.draw(VP);
-
-    
+   
     playa.draw(VP);
     cl.draw(VP);
 
@@ -326,19 +301,12 @@ void tick_input(GLFWwindow *window) {
     int in  = glfwGetKey(window, GLFW_KEY_I);
     int out = glfwGetKey(window, GLFW_KEY_O);
     int right = glfwGetKey(window, GLFW_KEY_RIGHT);
-    if (in) {
-        screen_zoom += 0.1f;
-    }
-    if(out) {
-        screen_zoom -= 0.1f;
-    }
     if(right) {
         float apratio = 1280/720;
         random_spawn(heart_list,Rectangle(screen_center_x + apratio*horizontal_float, screen_center_y, 1.0f, 2*vertical_float, 0.0f, COLOR_BLACK) ,9995);
         random_spawn(sword_list, Rectangle(screen_center_x + apratio*horizontal_float, screen_center_y, 1.0f, 2*vertical_float, 0.0f, COLOR_BLACK),9995);
         random_spawn(magnet_list, Rectangle(screen_center_x + apratio*horizontal_float, screen_center_y, 1.0f, 2*vertical_float, 0.0f, COLOR_BLACK), 9998);
         random_spawn(heart_list, Rectangle(screen_center_x + apratio*horizontal_float, screen_center_y, 1.0f, 2*vertical_float, 0.0f, COLOR_BLACK), 9995);
-
     }
 
     if(screen_zoom > 1){
@@ -355,7 +323,7 @@ void tick_input(GLFWwindow *window) {
 
 void tick_elements(GLFWwindow *window) {
     //tick sprites
-    tick_sprites(ball_list);
+    // tick_sprites(ball_list);
     tick_sprites(firebeam_list);    
     tick_sprites(boomerang_list);
     tick_sprites(powerup_list);
@@ -373,7 +341,6 @@ void tick_elements(GLFWwindow *window) {
     tick_sprites(viserion_list);
     playa.tick(window);
 
-    
     // invincibility
     if(playa.invincibility){
         invincibility_state(ball_list,playa);
@@ -391,16 +358,12 @@ void tick_elements(GLFWwindow *window) {
     powerup_response(sword_list, playa);
     powerup_response(bolt_list, playa);
     powerup_response(heart_list, playa);
+    powerup_response(ball_list, playa);
 
-
-    // powerup_response(sword_list, playa);
     balloonfire_response(firebeam_list, waterballoon_list);
     balloonfire_response(fireline_list, waterballoon_list);
-    coin_response(ball_list, playa);
     ring_response(ring_list, playa);
-    
-    
-    remove_balloons(waterballoon_list);
+        
     remove_with_time(jetflare_list, 0.5f);
     remove_with_time(destroyed_list, 2.5f);
     remove_with_time(firebeamconfusion_list, 10.f);
@@ -427,6 +390,23 @@ void initGL(GLFWwindow *window, int width, int height) {
     /* Objects should be created before any other gl function and shaders */
     // Create the models
     
+
+    clr[0].r = 128;
+    clr[0].g = 212;
+    clr[0].b = 255;
+
+    clr[1].r = 255;
+    clr[1].g = 212;
+    clr[1].b = 128;
+
+    clr[2].r = 102;
+    clr[2].g = 255;
+    clr[2].b = 230;
+
+    clr[3].r = 213;
+    clr[3].g = 255;
+    clr[3].b = 128;
+
     //Hash values for seven segment
     hsh.push_back("1011111");
     hsh.push_back("0000101");
@@ -450,15 +430,13 @@ void initGL(GLFWwindow *window, int width, int height) {
     fireline_list.push_back(Fireline(4.0f,2.0f,2.0f,M_PI/3,COLOR_GREEN));
     fireline_list.push_back(Fireline(10.0f,2.0f,2.0f,M_PI/6,COLOR_GREEN));
     firebeamconfusion_list.push_back(Firebeamconfusion(-1.0f,-1.0f, 2*horizontal_float, 1.0f, COLOR_RED));
-    
-    
+        
     ring_list.push_back(Ring(0.0f,-2.0f));
     magnet_list.push_back(Magnet(2.0f, 2.0f));
     viserion_list.push_back(Viserion(screen_center_x, 3.0f));
     sword_list.push_back(Sword(2.0f, 2.0f));
     heart_list.push_back(Heart(-2.0f, 4.0f));
     bolt_list.push_back(Bolt(-4.0f, 4.0f));
-
     
     // Create and compile our GLSL program from the shaders
     
@@ -488,6 +466,7 @@ int main(int argc, char **argv) {
     srand(time(0));
     int width  = 1280;
     int height = 720;
+    clock_t start = std::clock();
     // flag = 1;
     window = initGLFW(width, height);
 
@@ -499,7 +478,13 @@ int main(int argc, char **argv) {
         if (t60.processTick()) {
             // 60 fps
             // OpenGL Draw commands
-           
+            static int i;
+            if( (std::clock() - start)/CLOCKS_PER_SEC > 5.0f){
+                glClearColor ( (clr[i%4].r) / 256.0, (clr[i%4].g) / 256.0, (clr[i%4].b) / 256.0, 0.0f); // R, G, B, A
+                glClearDepth (1.0f);
+                ++i;
+                start = std::clock();
+            }
             // Swap Frame Buffer in double buffering
             glfwSwapBuffers(window);
 
@@ -512,11 +497,6 @@ int main(int argc, char **argv) {
     }
 
     quit(window);
-}
-
-bool detect_collision(bounding_box_t a, bounding_box_t b) {
-    return (abs(a.x - b.x) * 2 < (a.width + b.width)) &&
-           (abs(a.y - b.y) * 2 < (a.height + b.height));
 }
 
 void reset_screen() {

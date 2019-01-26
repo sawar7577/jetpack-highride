@@ -18,6 +18,12 @@ main.h
 list
 -
 
+/home/sawar/Documents/graphics/jetpack-highride/src/collision.cpp
+collision.h
+/home/sawar/Documents/graphics/jetpack-highride/src/collision.h
+
+/home/sawar/Documents/graphics/jetpack-highride/src/collision.h
+
 /home/sawar/Documents/graphics/jetpack-highride/src/color.cpp
 main.h
 /home/sawar/Documents/graphics/jetpack-highride/src/main.h
@@ -43,6 +49,8 @@ glm/gtc/matrix_transform.hpp
 -
 main.h
 /home/sawar/Documents/graphics/jetpack-highride/src/main.h
+
+/home/sawar/Documents/graphics/jetpack-highride/src/lists.cpp
 
 /home/sawar/Documents/graphics/jetpack-highride/src/main.cpp
 main.h

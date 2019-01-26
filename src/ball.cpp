@@ -45,7 +45,7 @@ void add_jetflares(list <Jetflare> &l, float x, float y) {
 void add_iceballs(list <Iceball> &l, float x, float y) {
 	unsigned long ret = xorshf96();
 	if(ret%100 == 0) {
-		l.push_back(Iceball(x,y, 0.5f, 0.5f, 1.0f, COLOR_BLACK));
+		l.push_back(Iceball(x,y, 1.0f, 1.0f, 1.0f, COLOR_BLACK));
 	}
 }
 
@@ -63,6 +63,9 @@ void Sprite::draw(glm::mat4 VP) {
 	for(int i = 0 ; i < this->recs.size() ; ++i) {
 		this->recs[i].draw(VP);
 	}
+	// for(int i = 0 ; i < this->broad_phase.size() ; ++i) {
+	// 	this->broad_phase[i].draw(VP);
+	// }
 }
 
 void Sprite::set_position(float x, float y) {
@@ -84,18 +87,30 @@ void Sprite::tick() {
 	}
 	for(int i = 0 ; i < this->broad_phase.size() ; ++i) {
 		this->broad_phase[i].position = this->position;
+		this->broad_phase[i].rotation = this->rotation;
 	}
 }
 
 Ball::Ball(float x, float y, color_t color) : Sprite(x, y , 0.25, 0.25, M_PI/4, COLOR_FIREYELLOW){
-	this->recs.push_back(Rectangle(x, y, 0.25f, 0.25f, M_PI/4, COLOR_FIREYELLOW));
+	unsigned long ret = xorshf96();
+	color_t c;
+	if(ret % 2 == 0){
+		this->points = 2;
+		c = COLOR_FIREYELLOW;
+	}
+	else {
+		this->points = 1;
+		c = COLOR_FIRERED;
+	}
+
+	this->recs.push_back(Rectangle(x, y, 0.25f, 0.25f, M_PI/4, c));
 }
 
-void Ball::tick() {
- 
+void Ball::action(Player &player) {
+	player.score += this->points;
 }
 
-Player::Player(float x, float y, float width, float height, float mass, color_t color):Sprite(x,y,width,height,0,color) {
+Player::Player(float x, float y, float width, float height, float mass, color_t color) : Sprite(x,y,width,height,0,color) {
 	this->mass = mass;
 	this->score = 0;
 	this->speedy = 0.0036f;
@@ -104,20 +119,23 @@ Player::Player(float x, float y, float width, float height, float mass, color_t 
 	this->inv = -5.0f;
 	this->invincibility = false;
 	this->lives = 5;
-	this->recs.push_back(Rectangle(x+width/2-width/3,y-height/10,2*width/3,height/2,0,COLOR_GREEN));
+	this->recs.push_back(Rectangle(x+width/2-width/3,y-height/10,2*width/3,height/2,0,COLOR_SHAMROCKGREEN));
 	this->relpos.push_back(glm::vec3(width/2-width/3,-height/10,0));
-	this->recs.push_back(Rectangle(x-width/2+width/6,y,width/3,height/3,0,COLOR_RED));
+	this->recs.push_back(Rectangle(x-width/2+width/6,y,width/3,height/3,0,COLOR_OXFORDBLUE));
 	this->relpos.push_back(glm::vec3(-width/2+width/6,0,0));	
-	this->recs.push_back(Rectangle(x-width/2+width/6,y+height/8,width/5,2*height/8,0,COLOR_RED));
+	this->recs.push_back(Rectangle(x-width/2+width/6,y+height/8,width/5,2*height/8,0,COLOR_OXFORDBLUE));
 	this->relpos.push_back(glm::vec3(-width/2+width/6,height/8,0));	
-	this->recs.push_back(Rectangle(x+width/2-width/3,y-height/10+height/4+height/40,width/8,height/20,0,COLOR_RED));
+	this->recs.push_back(Rectangle(x+width/2-width/3,y-height/10+height/4+height/40,width/8,height/20,0,COLOR_CHOCOLATE));
 	this->relpos.push_back(glm::vec3(width/2-width/3,-height/10+height/4+height/40,0));	
-	this->recs.push_back(Rectangle(x+width/2-width/3,y-height/10+height/4+height/20+13*height/80,2*width/3,13*height/40,0,COLOR_BLACK));
+	this->recs.push_back(Rectangle(x+width/2-width/3,y-height/10+height/4+height/20+13*height/80,2*width/3,13*height/40,0,COLOR_TOPAZ));
 	this->relpos.push_back(glm::vec3(width/2-width/3,-height/10+height/4+height/20+13*height/80,0));
-	this->recs.push_back(Rectangle(x+width/2-width/3+width/5,y-height/4-height/8,width/5,height/4,0,COLOR_RED));
+	this->recs.push_back(Rectangle(x+width/2-width/3,y-height/10+height/4+height/20+13*height/80,2*width/3,13*height/80,0,COLOR_BLACK));
+	this->relpos.push_back(glm::vec3(width/2-width/3,-height/10+height/4+3*height/20+13*height/80,0));
+	this->recs.push_back(Rectangle(x+width/2-width/3+width/5,y-height/4-height/8,width/5,height/4,0,COLOR_SKOBELOFF));
 	this->relpos.push_back(glm::vec3(width/2-width/3+width/5,-height/4-height/8,0));	
-	this->recs.push_back(Rectangle(x+width/2-width/3-width/5,y-height/4-height/8,width/5,height/4,0,COLOR_RED));
-	this->relpos.push_back(glm::vec3(width/2-width/3-width/5,-height/4-height/8,0));	
+	this->recs.push_back(Rectangle(x+width/2-width/3-width/5,y-height/4-height/8,width/5,height/4,0,COLOR_SKOBELOFF));
+	this->relpos.push_back(glm::vec3(width/2-width/3-width/5,-height/4-height/8,0));
+	
 }
 
 
@@ -134,17 +152,17 @@ void Player::tick(GLFWwindow *window) {
         this->momentum.x += this->speedy;
 		add_coin(ball_list);
     }
-    if(glfwGetKey(window,GLFW_KEY_UP)){
+    if(glfwGetKey(window,GLFW_KEY_SPACE) || glfwGetKey(window,GLFW_KEY_UP)){
 		add_jetflares(jetflare_list, this->position.x - this->width/2, this->position.y);
         this->momentum.y += this->speedy;
     }
     if(glfwGetKey(window,GLFW_KEY_DOWN)){
         this->momentum.y -= this->speedy;
     }
-	if(glfwGetKey(window,GLFW_KEY_SPACE)){
+	if(glfwGetKey(window,GLFW_KEY_B)){
 		clock_t now = std::clock();
 		if( (now-this->cooldown)/(double)CLOCKS_PER_SEC > 1.5f) {
-			waterballoon_list.push_back(WaterBalloon(this->position.x, this->position.y, 0.5f, 0.5f, 1.0f, COLOR_GREEN));
+			waterballoon_list.push_back(WaterBalloon(this->position.x, this->position.y, 0.75f, 0.75f, 1.0f, COLOR_GREEN));
 			this->cooldown = now;
 		}
 	}
@@ -158,14 +176,12 @@ void Player::tick(GLFWwindow *window) {
 		this->momentum.y = 0.0f;
 		this->position.y = top-this->height/2;
 	}
-	for(int i = 0 ; i < recs.size() ; ++i) {
-		this->recs[i].position = this->position + this->relpos[i];
-	}
     
 	if( (std::clock() - this->inv)/(float)CLOCKS_PER_SEC > 10.f){
 		this->invincibility = false;
 	}
 	screen_center_x = this->position.x;
+	Sprite::tick();
 }
 
 Rectangle::Rectangle(float x, float y, float w, float h, float rot, color_t color) {
@@ -257,7 +273,7 @@ void Magnet::tick(Player &player) {
 	}
 }
 
-Fireline::Fireline(float x, float y, float length, float rot, color_t color) {
+Fireline::Fireline(float x, float y, float length, float rot, color_t color): Sprite(x, y, length + 0.7f, 0.55f, rot, color){
 	this->position = glm::vec3(x, y, 0);
 	this->recs.push_back(Rectangle(x,y,length,0.25f,rot,COLOR_FIRERED));
 	this->relpos.push_back(glm::vec3(0,0,0));
@@ -267,7 +283,7 @@ Fireline::Fireline(float x, float y, float length, float rot, color_t color) {
 	this->relpos.push_back(glm::vec3(cos(rot+M_PI)*length/2.0f,(sin(rot+M_PI))*length/2.0f,0));	
 }
 
-Firebeam::Firebeam(float x, float y, float length, float rot, color_t color) {
+Firebeam::Firebeam(float x, float y, float length, float rot, color_t color) : Sprite(x, y, length + 0.7f, 0.55f, rot, color) {
 	this->position = glm::vec3(x, y, 0);
 	this->speed = 0.015f;
 	this->recs.push_back(Rectangle(x,y,length,0.25f,rot,COLOR_FIRERED));
@@ -295,9 +311,7 @@ void Firebeam::tick() {
 		this->position.y = bottom;
 		this->speed *= -1;
 	}
-	for(int i = 0 ; i < this->recs.size() ; ++i) {
-		this->recs[i].position = this->position + this->relpos[i];
-	}
+	Sprite::tick();
 }
 
 Boomerang::Boomerang(float x, float y, float center_x, float center_y, float width, float height, color_t color) : Sprite(x, y, width, height, 0, color) {
@@ -507,8 +521,20 @@ void Heart::action(Player &player) {
 WaterBalloon::WaterBalloon(float x, float y, float width, float height, float mass, color_t color) : Sprite(x, y, width, height, 0, color) {
 	this->mass = mass;
 	this->momentum = glm::vec3(0.1,0,0);
-	this->recs.push_back(Rectangle(x, y, width, height, 0, color));
-	this->relpos.push_back(glm::vec3(0, 0, 0));
+	this->recs.push_back(Rectangle(0,0,width/4,height/4,0,color));
+	this->relpos.push_back(glm::vec3(width/8,height/8,0));
+
+	this->recs.push_back(Rectangle(0,0,width/4,height/4,0,color));
+	this->relpos.push_back(glm::vec3(width/8,-height/8,0));
+
+	this->recs.push_back(Rectangle(0,0,width/4,height/4,0,color));
+	this->relpos.push_back(glm::vec3(3*width/8,height/8,0));
+
+	this->recs.push_back(Rectangle(0,0,width/4,height/4,0,color));
+	this->relpos.push_back(glm::vec3(3*width/8,-height/8,0));
+
+	this->recs.push_back(Rectangle(0,0,width/4,height/4,0,color));
+	this->relpos.push_back(glm::vec3(-width/8,0,0));
 }
 
 void WaterBalloon::tick() {
@@ -589,8 +615,21 @@ void Viserion::tick() {
 Iceball::Iceball(float x, float y, float width, float height, float mass, color_t color) : Sprite(x, y, width, height, 0, color) {
 	this->mass = mass;
 	this->momentum = glm::vec3(-0.1f, 0, 0);
-	this->recs.push_back(Rectangle(x,y,width,height,0,color));
-	this->relpos.push_back(glm::vec3(0,0,0));
+	
+	this->recs.push_back(Rectangle(0,0,width/4,height/4,0,color));
+	this->relpos.push_back(glm::vec3(width/8,height/8,0));
+
+	this->recs.push_back(Rectangle(0,0,width/4,height/4,0,color));
+	this->relpos.push_back(glm::vec3(width/8,-height/8,0));
+
+	this->recs.push_back(Rectangle(0,0,width/4,height/4,0,color));
+	this->relpos.push_back(glm::vec3(3*width/8,height/8,0));
+
+	this->recs.push_back(Rectangle(0,0,width/4,height/4,0,color));
+	this->relpos.push_back(glm::vec3(3*width/8,-height/8,0));
+
+	this->recs.push_back(Rectangle(0,0,width/4,height/4,0,color));
+	this->relpos.push_back(glm::vec3(-width/8,0,0));
 }
 
 void Iceball::tick() {
@@ -694,7 +733,7 @@ void CooldownBar::tick(float tme) {
 	Sprite::tick();
 }
 
-Ring::Ring(float x, float y, float radius, float thick, color_t color) : Sprite(x, y, 0, 0, M_PI, color) {
+Ring::Ring(float x, float y, float radius, float thick, color_t color) : Sprite(x, y, thick, thick, M_PI, COLOR_BLACK) {
 	this->radius = radius;
 	this->thick = thick;
 	this->activated = false;
@@ -702,6 +741,7 @@ Ring::Ring(float x, float y, float radius, float thick, color_t color) : Sprite(
 	this->relpos.push_back(glm::vec3(-radius, 0, 0));
 	this->semis.push_back(Semicircle(x,y,radius,color));
 	this->semis.push_back(Semicircle(x,y,radius-thick/2,COLOR_BACKGROUND));
+	// this->broad_phase[0].rotation = 0;
 }
 
 void Ring::tick(Player &player) {
@@ -722,13 +762,15 @@ void Ring::tick(Player &player) {
 		player.position.x = this->position.x + this->radius * cos(this->rotation);
 		player.position.y = this->position.y + this->radius * sin(this->rotation);
 	}
-	Sprite::tick();
+	// this->broad_phase[0].position.x = this->position.x - radius;
+	// Sprite::tick();
 }
 
 void Ring::draw(glm::mat4 VP){
 	for(int i = 0 ; i < this->semis.size() ; ++i) {
 		this->semis[i].draw(VP);
 	}
+	Sprite::draw(VP);
 }
 
 Semicircle::Semicircle(float x, float y, float radius, color_t color) {

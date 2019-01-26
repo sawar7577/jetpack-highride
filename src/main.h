@@ -96,6 +96,13 @@ extern const color_t COLOR_GREEN;
 extern const color_t COLOR_BLACK;
 extern const color_t COLOR_BACKGROUND;
 extern const color_t COLOR_SILVER;
+extern const color_t COLOR_OXFORDBLUE;
+extern const color_t COLOR_SHAMROCKGREEN;
+extern const color_t COLOR_CHOCOLATE;
+extern const color_t COLOR_SKOBELOFF;
+extern const color_t COLOR_TOPAZ;
+
+
 
 
 #endif

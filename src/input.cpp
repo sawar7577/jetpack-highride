@@ -6,12 +6,12 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 
+#define GLM_ENABLE_EXPERIMENTAL
 #define GLM_FORCE_RADIANS
 #include <glm/glm.hpp>
 #include <glm/gtx/transform.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-#define GLM_ENABLE_EXPERIMENTAL
 
 #include "main.h"
 
@@ -86,4 +86,10 @@ void mouseButton(GLFWwindow *window, int button, int action, int mods) {
 
 void scroll_callback(GLFWwindow *window, double xoffset, double yoffset) {
     // Do something
+    if(yoffset > 0) {
+        screen_zoom += 0.1f;
+    }
+    else {
+        screen_zoom = max(screen_zoom - 0.1f, 0.1f);
+    }
 }
