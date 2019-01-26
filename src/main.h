@@ -101,6 +101,10 @@ extern const color_t COLOR_SHAMROCKGREEN;
 extern const color_t COLOR_CHOCOLATE;
 extern const color_t COLOR_SKOBELOFF;
 extern const color_t COLOR_TOPAZ;
+extern const color_t COLOR_HARVESTGOLD;
+extern const color_t COLOR_FERRARIRED;
+extern const color_t COLOR_CHROMEYELLOW;
+extern const color_t COLOR_FOLLY;
 
 
 

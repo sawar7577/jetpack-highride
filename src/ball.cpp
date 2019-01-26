@@ -49,7 +49,6 @@ void add_iceballs(list <Iceball> &l, float x, float y) {
 	}
 }
 
-
 Sprite::Sprite(float x, float y, float width, float height, float rotation, color_t color) {
 	this->position = glm::vec3(x, y, 0);
 	this->width = width;
@@ -63,9 +62,6 @@ void Sprite::draw(glm::mat4 VP) {
 	for(int i = 0 ; i < this->recs.size() ; ++i) {
 		this->recs[i].draw(VP);
 	}
-	// for(int i = 0 ; i < this->broad_phase.size() ; ++i) {
-	// 	this->broad_phase[i].draw(VP);
-	// }
 }
 
 void Sprite::set_position(float x, float y) {
@@ -118,7 +114,8 @@ Player::Player(float x, float y, float width, float height, float mass, color_t 
 	this->cooldown = std::clock();
 	this->inv = -5.0f;
 	this->invincibility = false;
-	this->lives = 5;
+	this->inring = false;
+	this->lives = 15;
 	this->recs.push_back(Rectangle(x+width/2-width/3,y-height/10,2*width/3,height/2,0,COLOR_SHAMROCKGREEN));
 	this->relpos.push_back(glm::vec3(width/2-width/3,-height/10,0));
 	this->recs.push_back(Rectangle(x-width/2+width/6,y,width/3,height/3,0,COLOR_OXFORDBLUE));
@@ -177,7 +174,7 @@ void Player::tick(GLFWwindow *window) {
 		this->position.y = top-this->height/2;
 	}
     
-	if( (std::clock() - this->inv)/(float)CLOCKS_PER_SEC > 10.f){
+	if( (std::clock() - this->inv)/(float)CLOCKS_PER_SEC > 5.f){
 		this->invincibility = false;
 	}
 	screen_center_x = this->position.x;
@@ -232,7 +229,7 @@ Floor::Floor(float x, float y):Sprite(x,y,0,0,0,COLOR_BLACK){
 }
 
 void Floor::draw(glm::mat4 VP, float x) {
-	if(this->recs[this->map].position.x - x < -8.0f){
+	if(this->recs[this->map].position.x - x < -14.0f){
 		this->recs[this->map].position.x = this->recs[ (this->map+39)%40 ].position.x+vertical_float/5;
 		this->map++; 
 	}
@@ -274,31 +271,33 @@ void Magnet::tick(Player &player) {
 }
 
 void Magnet::action(Player &player) {
-	player.momentum = glm::vec3(0,0,0);
+	// if(!player.inring)
+		player.momentum = glm::vec3(0,0,0);
 }
 
 Fireline::Fireline(float x, float y, float length, float rot, color_t color): Sprite(x, y, length + 0.7f, 0.55f, rot, color){
 	this->position = glm::vec3(x, y, 0);
-	this->recs.push_back(Rectangle(x,y,length,0.25f,rot,COLOR_FIRERED));
+	this->recs.push_back(Rectangle(x,y,length,0.25f,rot,COLOR_CHROMEYELLOW));
 	this->relpos.push_back(glm::vec3(0,0,0));
-	this->recs.push_back(Rectangle((x)+cos(rot)*length/2.0f,y+(sin(rot))*length/2.0f,0.5f,0.5f,rot+M_PI/4,COLOR_FIREYELLOW));
+	this->recs.push_back(Rectangle((x)+cos(rot)*length/2.0f,y+(sin(rot))*length/2.0f,0.5f,0.5f,rot+M_PI/4,COLOR_FERRARIRED));
 	this->relpos.push_back(glm::vec3(cos(rot)*length/2.0f,(sin(rot))*length/2.0f,0));	
-	this->recs.push_back(Rectangle((x)+cos(rot+M_PI)*length/2.0f,y+(sin(rot+M_PI))*length/2.0f,0.5f,0.5f,rot+M_PI/4,COLOR_FIREYELLOW));	
+	this->recs.push_back(Rectangle((x)+cos(rot+M_PI)*length/2.0f,y+(sin(rot+M_PI))*length/2.0f,0.5f,0.5f,rot+M_PI/4,COLOR_FERRARIRED));	
 	this->relpos.push_back(glm::vec3(cos(rot+M_PI)*length/2.0f,(sin(rot+M_PI))*length/2.0f,0));	
 }
 
 void Fireline::action(Player &player) {
-	player.lives--;
+	if(!player.inring && !player.invincibility)
+		player.lives--;
 }
 
 Firebeam::Firebeam(float x, float y, float length, float rot, color_t color) : Sprite(x, y, length + 0.7f, 0.55f, rot, color) {
 	this->position = glm::vec3(x, y, 0);
 	this->speed = 0.015f;
-	this->recs.push_back(Rectangle(x,y,length,0.25f,rot,COLOR_FIRERED));
+	this->recs.push_back(Rectangle(x,y,length,0.25f,0,COLOR_CHROMEYELLOW));
 	this->relpos.push_back(glm::vec3(0,0,0));
-	this->recs.push_back(Rectangle((x)+cos(rot)*length/2.0f,y+(sin(rot))*length/2.0f,0.5f,0.5f,rot+M_PI/4,COLOR_FIREYELLOW));
+	this->recs.push_back(Rectangle((x)+cos(rot)*length/2.0f,y+(sin(rot))*length/2.0f,0.5f,0.5f,0+M_PI/4,COLOR_FERRARIRED));
 	this->relpos.push_back(glm::vec3(-length/2.0f,0,0));		
-	this->recs.push_back(Rectangle((x)+cos(rot+M_PI)*length/2.0f,y+(sin(rot+M_PI))*length/2.0f,0.5f,0.5f,rot+M_PI/4,COLOR_FIREYELLOW));	
+	this->recs.push_back(Rectangle((x)+cos(rot+M_PI)*length/2.0f,y+(sin(rot+M_PI))*length/2.0f,0.5f,0.5f,0+M_PI/4,COLOR_FERRARIRED));	
 	this->relpos.push_back(glm::vec3(length/2.0f,0.0f,0));	
 
 }
@@ -323,17 +322,19 @@ void Firebeam::tick() {
 }
 
 void Firebeam::action(Player &player) {
-	player.lives--;	
+	if(!player.inring && !player.invincibility)
+		player.lives--;	
 }
 
-Boomerang::Boomerang(float x, float y, float center_x, float center_y, float width, float height, color_t color) : Sprite(x, y, width, height, 0, color) {
+Boomerang::Boomerang(float center_x, float center_y, float width, float height, color_t color) : Sprite(0, 0, width, height, 0, color) {
 	this->center_x = center_x;
 	this->center_y = center_y;
-	this->recs.push_back(Rectangle(x + width/2 - sqrt(width*width+height*height)/4*2, y + height/2 - sqrt(width*width+height*height)/4*2, width/4, height/4, M_PI/4, color));
+	this->start = std::clock();
+	this->recs.push_back(Rectangle(0, 0, width/4, height/4, M_PI/4, color));
 	this->relpos.push_back(glm::vec3(width/2 - sqrt(width*width+height*height)/4*2, height/2 - sqrt(width*width+height*height)/4*2, 0));
-	this->recs.push_back(Rectangle(this->recs[0].position.x - sqrt(width*width+height*height)/4*2, this->recs[0].position.y, width/4, height/4, M_PI/4, color));
+	this->recs.push_back(Rectangle(0,0, width/4, height/4, M_PI/4, color));
 	this->relpos.push_back(glm::vec3(width/2 - sqrt(width*width+height*height)/4, height/2 - sqrt(width*width+height*height)/4*2, 0));	
-	this->recs.push_back(Rectangle(this->recs[0].position.x, this->recs[0].position.y - sqrt(width*width+height*height)/4*2, width/4, height/4, M_PI/4, color));
+	this->recs.push_back(Rectangle(0,0, width/4, height/4, M_PI/4, color));
 	this->relpos.push_back(glm::vec3(width/2 - sqrt(width*width+height*height)/4*2, height/2 - sqrt(width*width+height*height)/4, 0));
 }
 
@@ -346,8 +347,8 @@ glm::vec3 rotateaxes(glm::vec3 axis, float rotation){
 
 void Boomerang::tick() {
 	this->rotation += 0.05f;
-	this->position.x = 4.0f*cos(this->rotation) + this->center_x;
-	this->position.y = 2.25f*sin(this->rotation) + this->center_y;
+	this->position.x = 5.0f*cos(this->rotation) + this->center_x;
+	this->position.y = 3.25f*sin(this->rotation) + this->center_y;
 	for(int i = 0 ; i < this->recs.size() ; ++i) {
 		this->recs[i].rotation += 0.25f;
 		this->relpos[i] = rotateaxes(this->relpos[i],0.25f);
@@ -356,7 +357,8 @@ void Boomerang::tick() {
 }
 
 void Boomerang::action(Player &player) {
-	player.lives--;
+	if(!player.inring && !player.invincibility)
+		player.lives--;
 }
 
 Powerup::Powerup(float x, float y, float width, float height, float mass, color_t color) : Sprite(x, y, width, height, 0, color) {
@@ -417,33 +419,43 @@ void Sword::action(Player &player) {
 	player.invincibility = true; 
 }
 
+Sworddisplay::Sworddisplay(float x, float y, float width, float height, float mass, color_t color) : Sword(x, y, width, height, mass, color) {
+
+}
+
+void Sworddisplay::tick(Player &player) {
+	this->position.y = player.position.y;
+	this->position.x = player.position.x + player.width/2;
+	Sprite::tick();
+}
+
 Bolt::Bolt(float x, float y, float width, float height, float mass, color_t color) : Powerup(x, y, width, height, mass, color) {
 	
-	this->recs.push_back(Rectangle(0, 0, width/7, height/7, 0, COLOR_GREEN));
+	this->recs.push_back(Rectangle(0, 0, width/7, height/7, 0, COLOR_HARVESTGOLD));
 	this->relpos.push_back(glm::vec3(0, -6*height/14, 0));
 	
-	this->recs.push_back(Rectangle(0, 0, width/7, height/7, 0, COLOR_GREEN));
+	this->recs.push_back(Rectangle(0, 0, width/7, height/7, 0, COLOR_HARVESTGOLD));
 	this->relpos.push_back(glm::vec3(0, -4*height/14, 0));
 
-	this->recs.push_back(Rectangle(0, 0, width/7, height/7, 0, COLOR_SILVER));
+	this->recs.push_back(Rectangle(0, 0, width/7, height/7, 0, COLOR_HARVESTGOLD));
 	this->relpos.push_back(glm::vec3(0, -2*height/14, 0));
 
-	this->recs.push_back(Rectangle(0, 0, width/7, height/7, 0, COLOR_SILVER));
+	this->recs.push_back(Rectangle(0, 0, width/7, height/7, 0, COLOR_HARVESTGOLD));
 	this->relpos.push_back(glm::vec3(2*width/14, -2*height/14, 0));
 
-	this->recs.push_back(Rectangle(0, 0, width/7, height/7, 0, COLOR_BLACK));
+	this->recs.push_back(Rectangle(0, 0, width/7, height/7, 0, COLOR_HARVESTGOLD));
 	this->relpos.push_back(glm::vec3(2*width/14, 0, 0));
 
-	this->recs.push_back(Rectangle(0, 0, width/7, height/7, 0, COLOR_BLACK));
+	this->recs.push_back(Rectangle(0, 0, width/7, height/7, 0, COLOR_HARVESTGOLD));
 	this->relpos.push_back(glm::vec3(2*width/14, 2*height/14, 0));
 	
-	this->recs.push_back(Rectangle(0, 0, width/7, height/7, 0, COLOR_SILVER));
+	this->recs.push_back(Rectangle(0, 0, width/7, height/7, 0, COLOR_HARVESTGOLD));
 	this->relpos.push_back(glm::vec3(4*width/14, 2*height/14, 0));
 
-	this->recs.push_back(Rectangle(0, 0, width/7, height/7, 0, COLOR_SILVER));
+	this->recs.push_back(Rectangle(0, 0, width/7, height/7, 0, COLOR_HARVESTGOLD));
 	this->relpos.push_back(glm::vec3(4*width/14, 4*height/14, 0));
 
-	this->recs.push_back(Rectangle(0, 0, width/7, height/7, 0, COLOR_SILVER));
+	this->recs.push_back(Rectangle(0, 0, width/7, height/7, 0, COLOR_HARVESTGOLD));
 	this->relpos.push_back(glm::vec3(4*width/14, 6*height/14, 0));
 }
 
@@ -664,7 +676,8 @@ void Iceball::tick() {
 }
 
 void Iceball::action(Player &player) {
-	player.lives--;
+	if(!player.inring && !player.invincibility)
+		player.lives--;
 }
 
 Jetflare::Jetflare(float x, float y, float width, float height, float mass, color_t color) : Sprite(x, y, width, height, 0, color) {
@@ -768,12 +781,14 @@ void Ring::tick(Player &player, GLFWwindow *window) {
 	if(sqrt(xdiff*xdiff+ydiff*ydiff)  > this->radius + 0.1f) {
 		this->activated = false;
 	}
-	if( (this->rotation < 0 || this->rotation > M_PI) && !this->activated) {
+	if( (this->rotation < 0 || this->rotation > M_PI || player.position.y < this->position.y - 0.5f) && player.inring) {
 		this->activated = false;
 		this->rotation = M_PI;
-		// player.momentum = glm::vec3(0,0,0);
+		player.inring = false;
 	}
 	if(this->activated == true) {
+
+		player.inring = true;
 		if(glfwGetKey(window, GLFW_KEY_LEFT)){
 			this->rotation += 0.01f;
 		}
@@ -828,9 +843,9 @@ Firebeamconfusion::Firebeamconfusion(float x, float y, float width, float height
 	this->position = glm::vec3(x, y, 0);
 	this->recs.push_back(Rectangle(0,0,0,0.25f,0,COLOR_FIRERED));
 	this->relpos.push_back(glm::vec3(0,3*vertical_float,0));
-	this->recs.push_back(Rectangle(0,0,0.5f,0.5f,M_PI/4,COLOR_FIREYELLOW));
+	this->recs.push_back(Rectangle(0,0,0.5f,0.5f,M_PI/4,COLOR_FERRARIRED));
 	this->relpos.push_back(glm::vec3(-width/2,0,0));	
-	this->recs.push_back(Rectangle(0,0,0.5f,0.5f,M_PI/4,COLOR_FIREYELLOW));
+	this->recs.push_back(Rectangle(0,0,0.5f,0.5f,M_PI/4,COLOR_FERRARIRED));
 	this->relpos.push_back(glm::vec3(width/2,0,0));
 }
 
@@ -838,9 +853,8 @@ void Firebeamconfusion::tick(Player &player) {
 	this->position.x = player.position.x;
 	float tme = (std::clock() - this->start)/(float)CLOCKS_PER_SEC;
 	if( tme < 8.0f && tme > 4.0f) {
-		this->recs[0] = Rectangle(0,0,this->width*(tme-4.0f)/4.0f,0.25f,0,COLOR_FIRERED);
+		this->recs[0] = Rectangle(0,0,this->width*(tme-4.0f)/4.0f,0.25f,0,COLOR_CHROMEYELLOW);
 		this->relpos[0].y = 0;
-		std::cout << this->position.x - this->recs[0].width/2 << " " << this->position.y << std::endl;
 	}
 	if(tme > 4.0f) {
 		add_jetflares(jetflare_list,this->position.x - this->recs[0].width/2, this->position.y);
@@ -850,5 +864,7 @@ void Firebeamconfusion::tick(Player &player) {
 }
 
 void Firebeamconfusion::action(Player &player) {
-	player.lives--;
+	if(!player.inring && !player.invincibility){
+		player.lives--;
+	}
 }

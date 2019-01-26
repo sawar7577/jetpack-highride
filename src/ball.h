@@ -49,6 +49,7 @@ class Player : public Sprite {
         float mass;
         float speedy;
         bool invincibility;
+        bool inring;
         int lives;
         clock_t inv;
         clock_t cooldown;
@@ -61,17 +62,18 @@ class Player : public Sprite {
 class Fireline : public Sprite {
     public:
         Fireline() {}
-        Fireline(float x, float y, float length, float rot, color_t color);
+        Fireline(float x, float y, float length = 2.0f, float rot = random(), color_t color = COLOR_RED);
         void action(Player &player);
 };
 
 
 class Boomerang : public Sprite {
     public:
+        clock_t start;
         float center_x;
         float center_y;
         Boomerang() {}
-        Boomerang(float x, float y, float center_x, float center_y, float width, float height, color_t color);
+        Boomerang(float center_x, float center_y, float width = 1.0f, float height = 1.0f, color_t color = COLOR_CHOCOLATE);
         void tick();
         void action(Player &player);
 };
@@ -81,7 +83,7 @@ class Firebeam : public Sprite {
     public:
         float speed;
         Firebeam() {}
-        Firebeam(float x, float y, float length, float rot, color_t color);
+        Firebeam(float x, float y, float length = 2.0f, float rot = random(), color_t color = COLOR_RED);
         void tick();
         void action(Player &player);
 };
@@ -100,7 +102,7 @@ class Firebeamconfusion : public Sprite {
     public:
         clock_t start;
         Firebeamconfusion () {}
-        Firebeamconfusion(float x, float y, float width, float height, color_t color);
+        Firebeamconfusion(float x, float y, float width = 2*horizontal_float, float height = 1.0f, color_t color = COLOR_RED);
         void tick(Player &player);
         void action(Player &player);
 };
@@ -159,6 +161,13 @@ class Sword : public Powerup {
         Sword() {}
         Sword(float x, float y, float width = 1.0f, float height = 1.0f, float mass = 1.0f, color_t color = COLOR_RED);
         void action(Player &player);
+};
+
+class Sworddisplay : public Sword {
+    public:
+        Sworddisplay() {}
+        Sworddisplay(float x, float y, float width = 1.0f, float height = 1.0f, float mass = 1.0f, color_t color = COLOR_RED);
+        void tick(Player &player);
 };
 
 class Heart : public Powerup {

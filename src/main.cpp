@@ -13,15 +13,15 @@ GLFWwindow *window;
 
 Player playa;
 Floor level;
-Magnet mag;
 vector <string> hsh;
 vector <Numbers> score;
 vector <Numbers> lives;
 Heart lifeimage; 
 CooldownBar cl;
 Viserion vs;
-color_t clr[5];
+Sworddisplay shield;
 int flag;
+color_t clr[5];
 
 
 glm::vec3 rotateAxes(glm::vec3 axis, float rotation){
@@ -193,7 +193,7 @@ void ring_response(list <Ring> &l, Player &player) {
 }
 
 float cam_y = 0;
-void setscore(vector <Numbers> &sc, int pscore, float x) {
+void setscore(vector <Numbers> &sc, int pscore, float x, color_t color) {
     sc.clear();
     for(int i = 0 ; pscore!=0 ; ++i){
         float posy;
@@ -203,7 +203,7 @@ void setscore(vector <Numbers> &sc, int pscore, float x) {
         else{
             posy = vertical_float - vertical_float/10;
         }        
-        sc.push_back(Numbers(x - i * 0.35f, posy, 0.25f, 0.5f, hsh[pscore%10], COLOR_BLACK));
+        sc.push_back(Numbers(x - i * 0.35f, posy, 0.25f, 0.5f, hsh[pscore%10], color));
         sc[i].tick();
         pscore /= 10;
     }
@@ -215,12 +215,14 @@ void draw_score(vector <Numbers> &sc, glm::mat4 VP){
     }
 }
 
-template <typename Type> void random_spawn(list <Type> &l, Rectangle bound_box, int probability) {
-    for(float i = 0.0f ; i < bound_box.width ; i += 0.5f) {
-        for(float j = 0.0f; j < bound_box.height; j += 0.5f) {
-            unsigned long ret = xorshf96();
-            if(ret%10000 > probability) {
-                l.push_back(Type(bound_box.position.x + i - bound_box.width/2, bound_box.position.y + j - bound_box.height/2));
+template <typename Type> void random_spawn(list <Type> &l, Rectangle bound_box, int probability, int maxobjects) {
+    if(l.size() < maxobjects ){
+        for(float i = 0.0f ; i < bound_box.width ; i += 0.5f) {
+            for(float j = 0.0f; j < bound_box.height && l.size() < maxobjects; j += 0.5f) {
+                unsigned long ret = xorshf96();
+                if(ret%10000 > probability) {
+                    l.push_back(Type(bound_box.position.x + i - bound_box.width/2, bound_box.position.y + j - bound_box.height/2));
+                }
             }
         }
     }
@@ -283,9 +285,12 @@ void draw(GLFWwindow *window) {
     draw_sprites(viserion_list, VP);
     draw_score(score, VP);
     draw_score(lives, VP);
-    // lifeimage.draw(VP);
-   
+    
     playa.draw(VP);
+
+    if(playa.invincibility){
+        shield.draw(VP);
+    }
     cl.draw(VP);
 
     level.draw(VP, target.x);
@@ -297,10 +302,16 @@ void tick_input(GLFWwindow *window) {
     int right = glfwGetKey(window, GLFW_KEY_RIGHT);
     if(right) {
         float apratio = 1280/720;
-        random_spawn(heart_list,Rectangle(screen_center_x + apratio*horizontal_float, screen_center_y, 1.0f, 2*vertical_float, 0.0f, COLOR_BLACK) ,9995);
-        random_spawn(sword_list, Rectangle(screen_center_x + apratio*horizontal_float, screen_center_y, 1.0f, 2*vertical_float, 0.0f, COLOR_BLACK),9995);
-        random_spawn(magnet_list, Rectangle(screen_center_x + apratio*horizontal_float, screen_center_y, 1.0f, 2*vertical_float, 0.0f, COLOR_BLACK), 9998);
-        random_spawn(heart_list, Rectangle(screen_center_x + apratio*horizontal_float, screen_center_y, 1.0f, 2*vertical_float, 0.0f, COLOR_BLACK), 9995);
+        random_spawn(bolt_list,Rectangle(screen_center_x + 2*apratio*horizontal_float, screen_center_y, 1.0f, 2*vertical_float, 0.0f, COLOR_BLACK) ,9998, 3);        
+        random_spawn(heart_list,Rectangle(screen_center_x + 2*apratio*horizontal_float, screen_center_y, 1.0f, 2*vertical_float, 0.0f, COLOR_BLACK) ,9998, 3);
+        random_spawn(sword_list, Rectangle(screen_center_x + 2*apratio*horizontal_float, screen_center_y, 1.0f, 2*vertical_float, 0.0f, COLOR_BLACK),9998, 3);
+        random_spawn(magnet_list, Rectangle(screen_center_x + 2*apratio*horizontal_float, screen_center_y, 1.0f, 2*vertical_float, 0.0f, COLOR_BLACK), 9998, 2);
+        random_spawn(firebeamconfusion_list, Rectangle(screen_center_x + 2*apratio*horizontal_float, screen_center_y, 1.0f, 2*vertical_float, 0.0f, COLOR_BLACK), 9998, 1);
+        random_spawn(fireline_list, Rectangle(screen_center_x + 2*apratio*horizontal_float, screen_center_y, 1.0f, 2*vertical_float, 0.0f, COLOR_BLACK), 9998, 1);
+        random_spawn(firebeam_list, Rectangle(screen_center_x + 2*apratio*horizontal_float, screen_center_y, 1.0f, 2*vertical_float, 0.0f, COLOR_BLACK), 9998, 1);
+        random_spawn(viserion_list, Rectangle(screen_center_x + 2*apratio*horizontal_float, screen_center_y, 1.0f, 2*vertical_float, 0.0f, COLOR_BLACK), 9998, 1);
+        random_spawn(ring_list, Rectangle(screen_center_x + 2*apratio*horizontal_float, screen_center_y, 1.0f, 1.0f, 0.0f, COLOR_BLACK), 9990, 1);
+        random_spawn(boomerang_list, Rectangle(playa.position.x, playa.position.y, 1.0f, 1.0f, 0.0f, COLOR_BLACK), 9995, 3);
     }
 
     if(screen_zoom > 1){
@@ -310,9 +321,7 @@ void tick_input(GLFWwindow *window) {
         cam_y = 0;
     }
     screen_center_x = playa.position.x;
-    // reset_screen();
-    reshapeWindow (window, 1280, 720);
-
+  
 }
 
 void tick_elements(GLFWwindow *window) {
@@ -340,6 +349,7 @@ void tick_elements(GLFWwindow *window) {
     tick_sprites(iceball_list);
     tick_sprites(viserion_list);
     playa.tick(window);
+    shield.tick(playa);
 
     // invincibility
     if(playa.invincibility){
@@ -370,8 +380,10 @@ void tick_elements(GLFWwindow *window) {
     ring_response(ring_list, playa);
         
     remove_with_time(jetflare_list, 0.5f);
+    remove_with_time(steam_list, 1.5f);
     remove_with_time(destroyed_list, 2.5f);
-    remove_with_time(firebeamconfusion_list, 10.f);
+    remove_with_time(firebeamconfusion_list, 10.0f);
+    remove_with_time(boomerang_list, 10.0f);
 
    //remove out of scene objects
     remove_beyondbounds(fireline_list);
@@ -380,11 +392,12 @@ void tick_elements(GLFWwindow *window) {
     remove_beyondbounds(magnet_list);
     remove_beyondbounds(heart_list);
     remove_beyondbounds(sword_list);
-    remove_beyondbounds(boomerang_list);
     remove_beyondbounds(ball_list);
+    remove_beyondbounds(ring_list);
+    remove_beyondbounds(bolt_list);
 
-    setscore(score, playa.score, screen_center_x);
-    setscore(lives, playa.lives, screen_center_x + 1.0f);
+    setscore(score, playa.score, screen_center_x, COLOR_BLACK);
+    setscore(lives, playa.lives, screen_center_x + 2.0f, COLOR_FOLLY);
     cl.tick((std::clock() - playa.cooldown)/(double)CLOCKS_PER_SEC);
     // camera_rotation_angle += 1;
 }
@@ -426,11 +439,12 @@ void initGL(GLFWwindow *window, int width, int height) {
 
 
     playa       = Player(screen_center_x, screen_center_y, 0.75f, 1.15f, 2.0f, COLOR_BLACK);
+    shield      = Sworddisplay(2.0f, 2.0f);
+
     level       = Floor(-10.0f, -4.0f);
-    // lifeimage   = Heart(-4.0f, 4.0f, 1.0f, 1.0f, 1.0f, COLOR_FIRERED);
-    // lifeimage.tick();
+   
     cl          = CooldownBar(-3.0f, vertical_float - vertical_float/60, 2*1280*horizontal_float/(screen_zoom*720), vertical_float/30, COLOR_BLACK);
-    boomerang_list.push_back(Boomerang(6.0f,-1.0f,0.0f,0.0f,1.0f,1.0f,COLOR_BLACK));
+    boomerang_list.push_back(Boomerang(0.0f,0.0f,1.0f,1.0f,COLOR_BLACK));
     firebeam_list.push_back(Firebeam(6.0f,2.0f,2.0f,0,COLOR_GREEN));
     fireline_list.push_back(Fireline(4.0f,2.0f,2.0f,M_PI/3,COLOR_GREEN));
     fireline_list.push_back(Fireline(10.0f,2.0f,2.0f,M_PI/6,COLOR_GREEN));
@@ -439,7 +453,7 @@ void initGL(GLFWwindow *window, int width, int height) {
     ring_list.push_back(Ring(0.0f,-2.0f));
     magnet_list.push_back(Magnet(2.0f, 2.0f));
     viserion_list.push_back(Viserion(screen_center_x, 3.0f));
-    sword_list.push_back(Sword(2.0f, 2.0f));
+    sword_list.push_back(Sword(-1.0f, 2.0f));
     heart_list.push_back(Heart(-2.0f, 4.0f));
     bolt_list.push_back(Bolt(-4.0f, 4.0f));
     
@@ -481,10 +495,13 @@ int main(int argc, char **argv) {
     while (!glfwWindowShouldClose(window) && playa.lives) {
         // Process timers
         if (t60.processTick()) {
+            if( (std::clock() - playa.inv)/CLOCKS_PER_SEC > 5.0f) {
+                playa.invincibility = false;
+            }
             // 60 fps
             // OpenGL Draw commands
             static int i;
-            if( (std::clock() - start)/CLOCKS_PER_SEC > 5.0f){
+            if( (std::clock() - start)/CLOCKS_PER_SEC > 25.0f){
                 glClearColor ( (clr[i%4].r) / 256.0, (clr[i%4].g) / 256.0, (clr[i%4].b) / 256.0, 0.0f); // R, G, B, A
                 glClearDepth (1.0f);
                 ++i;
