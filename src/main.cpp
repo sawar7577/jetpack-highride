@@ -89,15 +89,6 @@ template <typename Type> void tick_sprite_player(list <Type> &l, Player &player)
     }
 }
 
-void magnet_response(list <Magnet> &l, Player &player) {
-    list <Magnet> :: iterator it;
-    for(it = l.begin() ; it != l.end() ; ++it) {
-        if(collision_checker((*it), player)) {
-            player.momentum = glm::vec3(0, 0, 0);
-        }
-    }
-}
-
 
 void add_steam(list <Steam> &l, float x, float y, float width) {
 	for(float i = x - width/2 ; i < x + width/2 ; i+=0.1f) {
@@ -127,12 +118,15 @@ template <typename Type1, typename Type2> void balloonfire_response(list <Type1>
 }
 
 
-template <typename Type> void powerup_response(list <Type> &l, Player &player) {
+template <typename Type> void object_response(list <Type> &l, Player &player, bool flag) {
     typename list <Type> :: iterator it;
     for(it = l.begin() ; it!=l.end();){
         if(collision_checker((*it),player)){
             (*it).action(player);
-            l.erase(it++);
+            if(flag)
+                l.erase(it++);
+            else
+                it++;
         }
         else {
             it++;
@@ -335,7 +329,13 @@ void tick_elements(GLFWwindow *window) {
     tick_sprites(destroyed_list);
     tick_sprite_player(magnet_list,playa);
     tick_sprite_player(firebeamconfusion_list,playa);
-    tick_sprite_player(ring_list,playa);
+    
+    
+    //Ring movement generalisation to be added #bt
+    for(list <Ring> :: iterator it = ring_list.begin() ; it!=ring_list.end() ; ++it){
+        (*it).tick(playa, window);
+    }
+
     tick_sprites(steam_list);
     tick_sprites(iceball_list);
     tick_sprites(viserion_list);
@@ -354,11 +354,16 @@ void tick_elements(GLFWwindow *window) {
     }
     
     //response of sprites
-    magnet_response(magnet_list,playa);
-    powerup_response(sword_list, playa);
-    powerup_response(bolt_list, playa);
-    powerup_response(heart_list, playa);
-    powerup_response(ball_list, playa);
+    object_response(magnet_list,playa, false);
+    object_response(sword_list, playa, true);
+    object_response(iceball_list, playa, true);
+    object_response(boomerang_list, playa, true);
+    object_response(fireline_list, playa, true);
+    object_response(firebeam_list, playa, true);
+    object_response(firebeamconfusion_list, playa, true);
+    object_response(bolt_list, playa, true);
+    object_response(heart_list, playa, true);
+    object_response(ball_list, playa, true);
 
     balloonfire_response(firebeam_list, waterballoon_list);
     balloonfire_response(fireline_list, waterballoon_list);
@@ -473,7 +478,7 @@ int main(int argc, char **argv) {
     initGL (window, width, height);
     /* Draw in loop */
     int loop = 1;
-    while (!glfwWindowShouldClose(window)) {
+    while (!glfwWindowShouldClose(window) && playa.lives) {
         // Process timers
         if (t60.processTick()) {
             // 60 fps

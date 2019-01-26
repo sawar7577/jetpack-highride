@@ -42,31 +42,6 @@ class Sprite {
         void destroy();
 };
 
-class Fireline : public Sprite {
-    public:
-        Fireline() {}
-        Fireline(float x, float y, float length, float rot, color_t color);
-};
-
-
-class Boomerang : public Sprite {
-    public:
-        float center_x;
-        float center_y;
-        Boomerang() {}
-        Boomerang(float x, float y, float center_x, float center_y, float width, float height, color_t color);
-        void tick();
-};
-
-
-class Firebeam : public Sprite {
-    public:
-        float speed;
-        Firebeam() {}
-        Firebeam(float x, float y, float length, float rot, color_t color);
-        void tick();
-};
-
 
 class Player : public Sprite {
     public:
@@ -81,6 +56,34 @@ class Player : public Sprite {
         Player() {} 
         Player(float x, float y, float width, float height, float mass, color_t color);
         void tick(GLFWwindow *window);
+};
+
+class Fireline : public Sprite {
+    public:
+        Fireline() {}
+        Fireline(float x, float y, float length, float rot, color_t color);
+        void action(Player &player);
+};
+
+
+class Boomerang : public Sprite {
+    public:
+        float center_x;
+        float center_y;
+        Boomerang() {}
+        Boomerang(float x, float y, float center_x, float center_y, float width, float height, color_t color);
+        void tick();
+        void action(Player &player);
+};
+
+
+class Firebeam : public Sprite {
+    public:
+        float speed;
+        Firebeam() {}
+        Firebeam(float x, float y, float length, float rot, color_t color);
+        void tick();
+        void action(Player &player);
 };
 
 class Ball : public Sprite {
@@ -99,6 +102,7 @@ class Firebeamconfusion : public Sprite {
         Firebeamconfusion () {}
         Firebeamconfusion(float x, float y, float width, float height, color_t color);
         void tick(Player &player);
+        void action(Player &player);
 };
 
 class Floor : public Sprite {
@@ -116,6 +120,7 @@ class Magnet : public Sprite {
         Magnet(float x, float y, float width = 1.0f, float height = 1.0f, color_t color = COLOR_BLACK);
         float force;
         void tick(Player &player);
+        void action(Player &player);
 };
 
 class Viserion : public Sprite {
@@ -125,6 +130,7 @@ class Viserion : public Sprite {
         Viserion() {}
         Viserion(float x, float y, float width = 2.0f, float height = 2.0f, color_t color = COLOR_BLACK);
         void tick();
+        void action(Player &player);
 };
 
 class Iceball : public Sprite {
@@ -134,6 +140,7 @@ class Iceball : public Sprite {
         Iceball() {}
         Iceball(float x, float y, float width, float height, float mass, color_t color);
         void tick();
+        void action(Player &player);
 };
 
 
@@ -230,7 +237,7 @@ class Ring : public Sprite {
         vector <Semicircle> semis;
         Ring() {}
         Ring(float x, float y, float radius = 4.0f, float thick = 0.5f, color_t color = COLOR_RED);
-        void tick(Player &player);
+        void tick(Player &player, GLFWwindow *window);
         void draw(glm::mat4 VP);
 };
 

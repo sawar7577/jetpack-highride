@@ -273,6 +273,10 @@ void Magnet::tick(Player &player) {
 	}
 }
 
+void Magnet::action(Player &player) {
+	player.momentum = glm::vec3(0,0,0);
+}
+
 Fireline::Fireline(float x, float y, float length, float rot, color_t color): Sprite(x, y, length + 0.7f, 0.55f, rot, color){
 	this->position = glm::vec3(x, y, 0);
 	this->recs.push_back(Rectangle(x,y,length,0.25f,rot,COLOR_FIRERED));
@@ -281,6 +285,10 @@ Fireline::Fireline(float x, float y, float length, float rot, color_t color): Sp
 	this->relpos.push_back(glm::vec3(cos(rot)*length/2.0f,(sin(rot))*length/2.0f,0));	
 	this->recs.push_back(Rectangle((x)+cos(rot+M_PI)*length/2.0f,y+(sin(rot+M_PI))*length/2.0f,0.5f,0.5f,rot+M_PI/4,COLOR_FIREYELLOW));	
 	this->relpos.push_back(glm::vec3(cos(rot+M_PI)*length/2.0f,(sin(rot+M_PI))*length/2.0f,0));	
+}
+
+void Fireline::action(Player &player) {
+	player.lives--;
 }
 
 Firebeam::Firebeam(float x, float y, float length, float rot, color_t color) : Sprite(x, y, length + 0.7f, 0.55f, rot, color) {
@@ -314,6 +322,10 @@ void Firebeam::tick() {
 	Sprite::tick();
 }
 
+void Firebeam::action(Player &player) {
+	player.lives--;	
+}
+
 Boomerang::Boomerang(float x, float y, float center_x, float center_y, float width, float height, color_t color) : Sprite(x, y, width, height, 0, color) {
 	this->center_x = center_x;
 	this->center_y = center_y;
@@ -339,9 +351,12 @@ void Boomerang::tick() {
 	for(int i = 0 ; i < this->recs.size() ; ++i) {
 		this->recs[i].rotation += 0.25f;
 		this->relpos[i] = rotateaxes(this->relpos[i],0.25f);
-		this->recs[i].position = this->relpos[i] + this->position;
-
 	}
+	Sprite::tick();
+}
+
+void Boomerang::action(Player &player) {
+	player.lives--;
 }
 
 Powerup::Powerup(float x, float y, float width, float height, float mass, color_t color) : Sprite(x, y, width, height, 0, color) {
@@ -435,8 +450,6 @@ Bolt::Bolt(float x, float y, float width, float height, float mass, color_t colo
 void Bolt::action(Player &player){
 	player.speedy += 0.001f;
 }
-
-
 
 Heart::Heart(float x, float y, float width, float height, float mass, color_t color) : Powerup(x, y, width, height, mass, color) {
 
@@ -650,6 +663,10 @@ void Iceball::tick() {
 
 }
 
+void Iceball::action(Player &player) {
+	player.lives--;
+}
+
 Jetflare::Jetflare(float x, float y, float width, float height, float mass, color_t color) : Sprite(x, y, width, height, 0, color) {
 	this->mass = mass;
 	srand(std::time(0));
@@ -741,10 +758,9 @@ Ring::Ring(float x, float y, float radius, float thick, color_t color) : Sprite(
 	this->relpos.push_back(glm::vec3(-radius, 0, 0));
 	this->semis.push_back(Semicircle(x,y,radius,color));
 	this->semis.push_back(Semicircle(x,y,radius-thick/2,COLOR_BACKGROUND));
-	// this->broad_phase[0].rotation = 0;
 }
 
-void Ring::tick(Player &player) {
+void Ring::tick(Player &player, GLFWwindow *window) {
 
 	float xdiff = this->position.x-player.position.x;
 	float ydiff = this->position.y-player.position.y;
@@ -752,18 +768,21 @@ void Ring::tick(Player &player) {
 	if(sqrt(xdiff*xdiff+ydiff*ydiff)  > this->radius + 0.1f) {
 		this->activated = false;
 	}
-	if(this->rotation < 0) {
+	if( (this->rotation < 0 || this->rotation > M_PI) && !this->activated) {
 		this->activated = false;
 		this->rotation = M_PI;
-		player.momentum = glm::vec3(0,0,0);
+		// player.momentum = glm::vec3(0,0,0);
 	}
 	if(this->activated == true) {
-		this->rotation -= 0.01f;
+		if(glfwGetKey(window, GLFW_KEY_LEFT)){
+			this->rotation += 0.01f;
+		}
+		if(glfwGetKey(window, GLFW_KEY_RIGHT)){
+			this->rotation -= 0.01f;
+		}
 		player.position.x = this->position.x + this->radius * cos(this->rotation);
 		player.position.y = this->position.y + this->radius * sin(this->rotation);
 	}
-	// this->broad_phase[0].position.x = this->position.x - radius;
-	// Sprite::tick();
 }
 
 void Ring::draw(glm::mat4 VP){
@@ -828,4 +847,8 @@ void Firebeamconfusion::tick(Player &player) {
 		add_jetflares(jetflare_list,this->position.x + this->recs[0].width/2, this->position.y);
 	}
 	Sprite::tick();
+}
+
+void Firebeamconfusion::action(Player &player) {
+	player.lives--;
 }
