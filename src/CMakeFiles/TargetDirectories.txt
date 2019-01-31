@@ -1,3 +1,0 @@
-/home/sawar/Documents/graphics/graphics-boilerplate/src/CMakeFiles/edit_cache.dir
-/home/sawar/Documents/graphics/graphics-boilerplate/src/CMakeFiles/rebuild_cache.dir
-/home/sawar/Documents/graphics/graphics-boilerplate/src/CMakeFiles/graphics_asgn1.dir

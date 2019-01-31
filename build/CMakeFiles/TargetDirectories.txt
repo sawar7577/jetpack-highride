@@ -1,3 +1,0 @@
-/home/sawar/Documents/graphics/jetpack-highride/build/CMakeFiles/edit_cache.dir
-/home/sawar/Documents/graphics/jetpack-highride/build/CMakeFiles/rebuild_cache.dir
-/home/sawar/Documents/graphics/jetpack-highride/build/CMakeFiles/graphics_asgn1.dir
